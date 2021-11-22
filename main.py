@@ -1,7 +1,9 @@
+import tkinter
 import TKinterModernThemes as TKMT
 from tkinter import ttk
 import dk_api
 import mysql_query
+from PIL import Image, ImageTk
 
 permanentWidgets = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
                     "Library Ref", "Footprint Path", "Footprint Ref"]
@@ -13,14 +15,21 @@ class App(TKMT.ThemedTKinterFrame):
         cnx = mysql_query.init()
         dbColumnNames = []
 
+        img_home = Image.open('home.png')
+        img_home.thumbnail(size=(32, 32))
+        ph_home = ImageTk.PhotoImage(img_home)
+        img_settings = Image.open('settings.png')
+        img_settings.thumbnail(size=(32, 32))
+        ph_settings = ImageTk.PhotoImage(img_settings)
+
         def loadGui(event):
             dbColumnList = mysql_query.getDatabaseColumns(cnx, table_cbox.get().lower())
             row = 2
             # Delete any previously created widgets
             for column in dbColumnNames:
                 if column not in permanentWidgets:
-                    self.root.nametowidget(column.lower()).destroy()
-                    self.root.nametowidget(column.lower() + "_l").destroy()
+                    self.root.nametowidget(".nbk.f1." + column.lower()).destroy()
+                    self.root.nametowidget(".nbk.f1." + column.lower() + "_l").destroy()
             dbColumnNames.clear()
             # Create widgets
             for i, column in enumerate(dbColumnList):
@@ -44,8 +53,8 @@ class App(TKMT.ThemedTKinterFrame):
             for it in result:
                 if it[0] not in ["Supplier 1", "Supplier Part Number 1"]:
                     try:
-                        self.root.nametowidget(it[0].lower()).delete(0, 255)
-                        self.root.nametowidget(it[0].lower()).insert(0, it[1])
+                        self.root.nametowidget(".nbk.f1." + it[0].lower()).delete(0, 255)
+                        self.root.nametowidget(".nbk.f1." + it[0].lower()).insert(0, it[1])
                     except KeyError:
                         print(f"No widget named {it[0].lower()}")
 
@@ -53,7 +62,7 @@ class App(TKMT.ThemedTKinterFrame):
             rowData = []
             for col in dbColumnNames:
                 try:
-                    rowData.append(self.root.nametowidget(col.lower()).get())
+                    rowData.append(self.root.nametowidget(".nbk.f1." + col.lower()).get())
                 except KeyError:
                     print(f"No widget named {col.lower()}")
             mysql_query.insertInDatabase(cnx, table_cbox.get().lower(), dbColumnNames, rowData)
@@ -70,10 +79,10 @@ class App(TKMT.ThemedTKinterFrame):
         style.configure('lefttab.TNotebook', tabposition='wn', tabmargins=[-10, -5, -16, 0])
         style.configure('lefttab.TNotebook.Tab', padding=[0, 0])
 
-        notebook = ttk.Notebook(self.master, style='lefttab.TNotebook')
-        notebook.grid(row=2, column=2, rowspan=5, columnspan=3, padx=10, pady=10, sticky='nsew')
-        f1 = ttk.Frame(notebook)
-        f2 = ttk.Frame(notebook)
+        notebook = ttk.Notebook(self.master, style='lefttab.TNotebook', name="nbk")
+        notebook.grid(row=0, column=0, rowspan=5, columnspan=5, padx=0, pady=0, sticky='nsew')
+        f1 = ttk.Frame(notebook, name="f1")
+        f2 = ttk.Frame(notebook, name="f2")
         f1.pack(fill='both', expand=True)
         f2.pack(fill='both', expand=True)
 
@@ -110,6 +119,7 @@ class App(TKMT.ThemedTKinterFrame):
         supplier_pn_entry = ttk.Entry(f1, name="supplier part number 1")
         supplier_pn_entry.grid(row=2, column=3, padx=10, pady=10, sticky='nsew')
         supplier_pn_entry.bind("<Return>", query_supplier_event)
+        print(str(supplier_pn_entry))
 
         supplier_button = ttk.Button(f1, text="Autofill", command=query_supplier)
         supplier_button.grid(row=2, column=4, padx=10, pady=10, sticky='nsew')

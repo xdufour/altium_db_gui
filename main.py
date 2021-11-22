@@ -26,9 +26,9 @@ class App(TKMT.ThemedTKinterFrame):
             for i, column in enumerate(dbColumnList):
                 dbColumnNames.append(column[0])
                 if dbColumnNames[i] not in permanentWidgets:
-                    label = ttk.Label(self.master, text=dbColumnNames[i] + ":", name=(dbColumnNames[i].lower() + "_l"))
+                    label = ttk.Label(f1, text=dbColumnNames[i] + ":", name=(dbColumnNames[i].lower() + "_l"))
                     label.grid(row=row, column=0, padx=10, pady=10, sticky='nsew')
-                    entry = ttk.Entry(self.master, name=dbColumnNames[i].lower())
+                    entry = ttk.Entry(f1, name=dbColumnNames[i].lower())
                     entry.grid(row=row, column=1, padx=10, pady=10, sticky='nsew')
                     row = row + 1
             print(f"Reloaded GUI for {table_cbox.get()}")
@@ -66,58 +66,72 @@ class App(TKMT.ThemedTKinterFrame):
             return True
         valNameCmd = self.root.register(validateName)
 
-        table_label = ttk.Label(self.master, text="DB Table:")
+        style = ttk.Style(self.master)
+        style.configure('lefttab.TNotebook', tabposition='wn', tabmargins=[-10, -5, -16, 0])
+        style.configure('lefttab.TNotebook.Tab', padding=[0, 0])
+
+        notebook = ttk.Notebook(self.master, style='lefttab.TNotebook')
+        notebook.grid(row=2, column=2, rowspan=5, columnspan=3, padx=10, pady=10, sticky='nsew')
+        f1 = ttk.Frame(notebook)
+        f2 = ttk.Frame(notebook)
+        f1.pack(fill='both', expand=True)
+        f2.pack(fill='both', expand=True)
+
+        notebook.add(f1, image=ph_home, compound=tkinter.TOP)
+        notebook.add(f2, image=ph_settings, compound=tkinter.TOP)
+
+        table_label = ttk.Label(f1, text="DB Table:")
         table_label.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
-        table_cbox = ttk.Combobox(self.master, state="readonly")
+        table_cbox = ttk.Combobox(f1, state="readonly")
         table_cbox.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
         table_cbox['values'] = ("Capacitors", "OpAmps")
 
         table_cbox.bind("<<ComboboxSelected>>", loadGui)
         table_cbox.current(0)
 
-        db_button = ttk.Button(self.master, text="Add to database", command=addToDatabaseBtn)
+        db_button = ttk.Button(f1, text="Add to database", command=addToDatabaseBtn)
         db_button.grid(row=0, column=3, padx=10, pady=10, sticky='nsew')
         db_button["state"] = "disabled"
 
-        name_label = ttk.Label(self.master, text="Name:")
+        name_label = ttk.Label(f1, text="Name:")
         name_label.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
-        name_entry = ttk.Entry(self.master, name="name", validate="all", validatecommand=(valNameCmd, '%P'))
+        name_entry = ttk.Entry(f1, name="name", validate="all", validatecommand=(valNameCmd, '%P'))
         name_entry.grid(row=1, column=1, padx=10, pady=10, sticky='nsew')
 
-        supplier_label = ttk.Label(self.master, text="Supplier 1:")
+        supplier_label = ttk.Label(f1, text="Supplier 1:")
         supplier_label.grid(row=1, column=2, padx=10, pady=10, sticky='nsew')
-        supplier_cbox = ttk.Combobox(self.master, state="readonly", name="supplier 1")
+        supplier_cbox = ttk.Combobox(f1, state="readonly", name="supplier 1")
         supplier_cbox.grid(row=1, column=3, padx=10, pady=10, sticky='nsew')
         supplier_cbox['values'] = "Digi-Key"
         supplier_cbox.current(0)
 
-        supplier_pn_label = ttk.Label(self.master, text="Supplier Part Number 1:")
+        supplier_pn_label = ttk.Label(f1, text="Supplier Part Number 1:")
         supplier_pn_label.grid(row=2, column=2, padx=10, pady=10, sticky='nsew')
-        supplier_pn_entry = ttk.Entry(self.master, name="supplier part number 1")
+        supplier_pn_entry = ttk.Entry(f1, name="supplier part number 1")
         supplier_pn_entry.grid(row=2, column=3, padx=10, pady=10, sticky='nsew')
         supplier_pn_entry.bind("<Return>", query_supplier_event)
 
-        supplier_button = ttk.Button(self.master, text="Autofill", command=query_supplier)
+        supplier_button = ttk.Button(f1, text="Autofill", command=query_supplier)
         supplier_button.grid(row=2, column=4, padx=10, pady=10, sticky='nsew')
 
-        library_path_label = ttk.Label(self.master, text="Library Path" + ":")
+        library_path_label = ttk.Label(f1, text="Library Path" + ":")
         library_path_label.grid(row=3, column=2, padx=10, pady=10, sticky='nsew')
-        library_path_entry = ttk.Entry(self.master, name="library path")
+        library_path_entry = ttk.Entry(f1, name="library path")
         library_path_entry.grid(row=3, column=3, padx=10, pady=10, sticky='nsew')
 
-        library_ref_label = ttk.Label(self.master, text="Library Ref" + ":")
+        library_ref_label = ttk.Label(f1, text="Library Ref" + ":")
         library_ref_label.grid(row=4, column=2, padx=10, pady=10, sticky='nsew')
-        library_ref_entry = ttk.Entry(self.master, name="library ref")
+        library_ref_entry = ttk.Entry(f1, name="library ref")
         library_ref_entry.grid(row=4, column=3, padx=10, pady=10, sticky='nsew')
 
-        footprint_path_label = ttk.Label(self.master, text="Footprint Path" + ":")
+        footprint_path_label = ttk.Label(f1, text="Footprint Path" + ":")
         footprint_path_label.grid(row=5, column=2, padx=10, pady=10, sticky='nsew')
-        footprint_path_entry = ttk.Entry(self.master, name="footprint path")
+        footprint_path_entry = ttk.Entry(f1, name="footprint path")
         footprint_path_entry.grid(row=5, column=3, padx=10, pady=10, sticky='nsew')
 
-        footprint_ref_label = ttk.Label(self.master, text="Footprint Ref" + ":")
+        footprint_ref_label = ttk.Label(f1, text="Footprint Ref" + ":")
         footprint_ref_label.grid(row=6, column=2, padx=10, pady=10, sticky='nsew')
-        footprint_ref_entry = ttk.Entry(self.master, name="footprint ref")
+        footprint_ref_entry = ttk.Entry(f1, name="footprint ref")
         footprint_ref_entry.grid(row=6, column=3, padx=10, pady=10, sticky='nsew')
 
         loadGui(0)

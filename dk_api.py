@@ -6,9 +6,6 @@ os.environ['DIGIKEY_CLIENT_SECRET'] = 'kcXe6QYpoFQmfZUZ'
 os.environ['DIGIKEY_CLIENT_SANDBOX'] = 'False'
 os.environ['DIGIKEY_STORAGE_PATH'] = 'C:\cache_dir'
 
-unwantedFromQuery = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
-                    "Library Ref", "Footprint Path", "Footprint Ref"]
-
 capacitor_dict = {
     "Capacitance": "Capacitance",
     "Tolerance": "Tolerance",
@@ -42,16 +39,15 @@ def fetchDigikeyData(dkpn, tableName, dbColumnList):
                 dk_data[param_dict[param]] = value
 
         for column in dbColumnList:
-            if column not in unwantedFromQuery:
-                if column == "Description":
-                    value = part.detailed_description
-                elif column == "Manufacturer Part Number":
-                    value = part.manufacturer_part_number
-                elif column == "Manufacturer":
-                    value = part.manufacturer.to_dict()['value']
-                else:
-                    value = dk_data[column]
-                result.append([column, value])
+            if column == "Description":
+                value = part.detailed_description
+            elif column == "Manufacturer Part Number":
+                value = part.manufacturer_part_number
+            elif column == "Manufacturer":
+                value = part.manufacturer.to_dict()['value']
+            else:
+                value = dk_data[column]
+            result.append([column, value])
         return result
     except KeyError:
         print("Digi-Key API Request Failed: Wrong Part Category")

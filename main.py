@@ -5,8 +5,24 @@ import dk_api
 import mysql_query
 from PIL import Image, ImageTk
 
-permanentWidgets = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
+permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
                     "Library Ref", "Footprint Path", "Footprint Ref"]
+
+
+def getDbTableList(mysql_cnx):
+    dbTableList = []
+    dbTableCursor = mysql_query.getDatabaseTables(mysql_cnx)
+    for it in dbTableCursor:
+        dbTableList.append(it[0])
+    return dbTableList
+
+
+def strippedList(srcList, unwantedList):
+    dstList = []
+    for it in srcList:
+        if it not in unwantedList:
+            dstList.append(it)
+    return dstList
 
 
 class App(TKMT.ThemedTKinterFrame):
@@ -23,18 +39,18 @@ class App(TKMT.ThemedTKinterFrame):
         ph_settings = ImageTk.PhotoImage(img_settings)
 
         def loadGui(event):
-            dbColumnList = mysql_query.getDatabaseColumns(cnx, table_cbox.get().lower())
+            dbColumnList = mysql_query.getTableColumns(cnx, table_cbox.get().lower())
             row = 2
             # Delete any previously created widgets
             for column in dbColumnNames:
-                if column not in permanentWidgets:
+                if column not in permanentParams:
                     self.root.nametowidget(".nbk.f1." + column.lower()).destroy()
                     self.root.nametowidget(".nbk.f1." + column.lower() + "_l").destroy()
             dbColumnNames.clear()
             # Create widgets
             for i, column in enumerate(dbColumnList):
                 dbColumnNames.append(column[0])
-                if dbColumnNames[i] not in permanentWidgets:
+                if dbColumnNames[i] not in permanentParams:
                     label = ttk.Label(f1, text=dbColumnNames[i] + ":", name=(dbColumnNames[i].lower() + "_l"))
                     label.grid(row=row, column=0, padx=10, pady=10, sticky='nsew')
                     entry = ttk.Entry(f1, name=dbColumnNames[i].lower())
@@ -48,15 +64,14 @@ class App(TKMT.ThemedTKinterFrame):
         def query_supplier():
             dkpn = supplier_pn_entry.get()
             print(f"Querying Digi-Key for {dkpn}")
-            result = dk_api.fetchDigikeyData(dkpn, table_cbox.get().lower(), dbColumnNames)
+            result = dk_api.fetchDigikeyData(dkpn, table_cbox.get(), strippedList(dbColumnNames, permanentParams))
             print(result)
             for it in result:
-                if it[0] not in ["Supplier 1", "Supplier Part Number 1"]:
-                    try:
-                        self.root.nametowidget(".nbk.f1." + it[0].lower()).delete(0, 255)
-                        self.root.nametowidget(".nbk.f1." + it[0].lower()).insert(0, it[1])
-                    except KeyError:
-                        print(f"No widget named {it[0].lower()}")
+                try:
+                    self.root.nametowidget(".nbk.f1." + it[0].lower()).delete(0, 255)
+                    self.root.nametowidget(".nbk.f1." + it[0].lower()).insert(0, it[1])
+                except KeyError:
+                    print(f"No widget named {it[0].lower()}")
 
         def addToDatabaseBtn():
             rowData = []
@@ -93,7 +108,7 @@ class App(TKMT.ThemedTKinterFrame):
         table_label.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
         table_cbox = ttk.Combobox(f1, state="readonly")
         table_cbox.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
-        table_cbox['values'] = ("Capacitors", "OpAmps")
+        table_cbox['values'] = getDbTableList(cnx)
 
         table_cbox.bind("<<ComboboxSelected>>", loadGui)
         table_cbox.current(0)
@@ -119,7 +134,6 @@ class App(TKMT.ThemedTKinterFrame):
         supplier_pn_entry = ttk.Entry(f1, name="supplier part number 1")
         supplier_pn_entry.grid(row=2, column=3, padx=10, pady=10, sticky='nsew')
         supplier_pn_entry.bind("<Return>", query_supplier_event)
-        print(str(supplier_pn_entry))
 
         supplier_button = ttk.Button(f1, text="Autofill", command=query_supplier)
         supplier_button.grid(row=2, column=4, padx=10, pady=10, sticky='nsew')

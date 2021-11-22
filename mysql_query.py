@@ -8,7 +8,15 @@ def init():
     return cnx
 
 
-def getDatabaseColumns(cnx, table):
+def getDatabaseTables(cnx):
+    cursor = cnx.cursor(buffered=True)
+    query = "SHOW TABLES FROM `altium_db_library`"
+    print("SQL Query: " + query)
+    cursor.execute(query)
+    return cursor
+
+
+def getTableColumns(cnx, table):
     cursor = cnx.cursor(buffered=True)
     query = "SHOW COLUMNS FROM `altium_db_library`.`" + table + "`"
     print("SQL Query: " + query)

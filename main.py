@@ -3,6 +3,7 @@ import TKinterModernThemes as TKMT
 from tkinter import ttk
 import dk_api
 import mysql_query
+import json_appdata
 import mysql.connector
 from PIL import Image, ImageTk
 
@@ -29,6 +30,13 @@ def strippedList(srcList, unwantedList):
 class App(TKMT.ThemedTKinterFrame):
     def __init__(self, theme, mode, usecommandlineargs=False, usethemeconfigfile=False):
         super().__init__(str("Altium DB GUI"), theme, mode, usecommandlineargs, usethemeconfigfile)
+
+        self.loginInfoDict = {
+            "address": "",
+            "user": "",
+            "password": "",
+            "database": ""
+        }
 
         def loadGUI(event):
             dbColumnList = mysql_query.getTableColumns(self.cnx, table_cbox.get().lower())
@@ -82,13 +90,26 @@ class App(TKMT.ThemedTKinterFrame):
             return True
         valNameCmd = self.root.register(validateName)
 
+        def getDbLogins():
+            self.loginInfoDict = json_appdata.getDatabaseLoginInfo()
+            login_address_entry.insert(0, self.loginInfoDict['address'])
+            login_user_entry.insert(0, self.loginInfoDict['user'])
+            login_password_entry.insert(0, self.loginInfoDict['password'])
+            login_db_name_entry.insert(0, self.loginInfoDict['database'])
+
+        def saveDbLogins():
+            json_appdata.saveDatabaseLoginInfo(login_address_entry.get(),
+                                                login_user_entry.get(),
+                                                login_password_entry.get(),
+                                                login_db_name_entry.get())
+
         def loadDbTables():
             self.dbTableList = getDbTableList(self.cnx)
             table_cbox['values'] = self.dbTableList
             table_cbox.current(0)
 
-        def testConnection():
-            if not self.connected:
+        def testDbConnection():
+            if not self.connected and login_user_entry.get() and login_password_entry and login_address_entry and login_db_name_entry:
                 try:
                     self.cnx = mysql_query.init(login_user_entry.get(),
                                                 login_password_entry.get(),
@@ -98,17 +119,16 @@ class App(TKMT.ThemedTKinterFrame):
                         self.connected = True
                         loadDbTables()
                         loadGUI(0)
+                        login_test_button.configure(state="disabled")
+                        notebook.tab(0, state='normal')
                 except mysql.connector.errors.ProgrammingError:
                     print("Access Denied")
+                except mysql.connector.errors.InterfaceError:
+                    print("Invalid Login Information Format")
+            if not self.connected:
+                notebook.tab(0, state='disabled')
 
         self.connected = False
-
-        try:
-            self.cnx = mysql_query.init('admin', 'pantouflu50', 'localhost', 'altium_db_library')
-            if self.cnx.is_connected:
-                self.connected = True
-        except mysql.connector.errors.ProgrammingError:
-            print("Access Denied")
 
         img_home = Image.open('home.png')
         img_home.thumbnail(size=(32, 32))
@@ -120,7 +140,7 @@ class App(TKMT.ThemedTKinterFrame):
         self.dbTableList = []
         self.dbColumnNames = []
 
-        # Create notebook
+        # Create styles
         style = ttk.Style(self.master)
         style.configure('lefttab.TNotebook', tabposition='wn', tabmargins=[-10, -5, -16, 0])
         style.configure('lefttab.TNotebook.Tab', padding=[0, 0])
@@ -135,14 +155,42 @@ class App(TKMT.ThemedTKinterFrame):
         notebook.add(f_home, image=ph_home, compound=tkinter.TOP)
         notebook.add(f_settings, image=ph_settings, compound=tkinter.TOP)
 
+        # Settings page widgets
+        f_login = ttk.LabelFrame(f_settings, text="MySQL Server Login", name="f_login")
+        f_login.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
+
+        db_address_label = ttk.Label(f_login, text="Address:")
+        db_address_label.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
+        login_address_entry = ttk.Entry(f_login, name="db address entry")
+        login_address_entry.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
+
+        db_user_label = ttk.Label(f_login, text="User:")
+        db_user_label.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
+        login_user_entry = ttk.Entry(f_login, name="db user entry")
+        login_user_entry.grid(row=1, column=1, padx=10, pady=10, sticky='nsew')
+
+        db_password_label = ttk.Label(f_login, text="Password:")
+        db_password_label.grid(row=2, column=0, padx=10, pady=10, sticky='nsew')
+        login_password_entry = ttk.Entry(f_login, name="db password entry")
+        login_password_entry.grid(row=2, column=1, padx=10, pady=10, sticky='nsew')
+
+        db_name_label = ttk.Label(f_login, text="Database:")
+        db_name_label.grid(row=3, column=0, padx=10, pady=10, sticky='nsew')
+        login_db_name_entry = ttk.Entry(f_login, name="db name entry")
+        login_db_name_entry.grid(row=3, column=1, padx=10, pady=10, sticky='nsew')
+
+        login_test_button = ttk.Button(f_login, width=16, text="Test", command=testDbConnection)
+        login_test_button.grid(row=4, column=0, padx=10, pady=10, sticky='nsew')
+
         # Home page widgets
         table_label = ttk.Label(f_home, text="DB Table:")
         table_label.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
         table_cbox = ttk.Combobox(f_home, state="readonly")
         table_cbox.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
         table_cbox.bind("<<ComboboxSelected>>", loadGUI)
-        if self.connected:
-            loadDbTables()
+
+        getDbLogins()
+        testDbConnection()
 
         db_button = ttk.Button(f_home, text="Add to database", command=addToDatabaseBtn)
         db_button.grid(row=0, column=3, padx=10, pady=10, sticky='nsew')
@@ -189,38 +237,9 @@ class App(TKMT.ThemedTKinterFrame):
         footprint_ref_entry = ttk.Entry(f_home, name="footprint ref")
         footprint_ref_entry.grid(row=6, column=3, padx=10, pady=10, sticky='nsew')
 
-        # Settings page widgets
-        f_login = ttk.LabelFrame(f_settings, text="MySQL Server Login", name="f_login", borderwidth=1)
-        f_login.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
-
-        db_address_label = ttk.Label(f_login, text="Address:")
-        db_address_label.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
-        login_address_entry = ttk.Entry(f_login, name="db address entry")
-        login_address_entry.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
-
-        db_user_label = ttk.Label(f_login, text="User:")
-        db_user_label.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
-        login_user_entry = ttk.Entry(f_login, name="db user entry")
-        login_user_entry.grid(row=1, column=1, padx=10, pady=10, sticky='nsew')
-
-        db_password_label = ttk.Label(f_login, text="Password:")
-        db_password_label.grid(row=2, column=0, padx=10, pady=10, sticky='nsew')
-        login_password_entry = ttk.Entry(f_login, name="db password entry")
-        login_password_entry.grid(row=2, column=1, padx=10, pady=10, sticky='nsew')
-
-        db_name_label = ttk.Label(f_login, text="Database:")
-        db_name_label.grid(row=3, column=0, padx=10, pady=10, sticky='nsew')
-        login_db_name_entry = ttk.Entry(f_login, name="db name entry")
-        login_db_name_entry.grid(row=3, column=1, padx=10, pady=10, sticky='nsew')
-
-        logim_test_button = ttk.Button(f_login, text="Test", command=testConnection)
-        logim_test_button.grid(row=4, column=0, padx=10, pady=10, sticky='nsew')
-
-        db_save_button= ttk.Button(f_login, text="Save")
+        db_save_button= ttk.Button(f_login, text="Save", command=saveDbLogins)
         db_save_button.grid(row=4, column=1, padx=10, pady=10, sticky='nsew')
 
-        if self.connected:
-            loadGUI(0)
         self.run()
 
 

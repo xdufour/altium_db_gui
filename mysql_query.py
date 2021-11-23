@@ -1,10 +1,11 @@
+import mysql.connector.errors
 from mysql.connector import (connection)
 
 
-def init():
-    cnx = connection.MySQLConnection(user='admin', password='pantouflu50',
-                                     host='localhost',
-                                     database='altium_db_library')
+def init(user, password, address, database):
+    cnx = connection.MySQLConnection(user=user, password=password,
+                                     host=address,
+                                     database=database)
     return cnx
 
 

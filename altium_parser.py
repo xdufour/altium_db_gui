@@ -1,18 +1,28 @@
 import re
 import io
 
-f = io.open("tinyFG.SchLib", mode="r", encoding="latin-1")
 
-result = re.findall('LibReference=(.*?)[|]', f.read())
+def getLibraryRefList(filepath):
+    try:
+        f = io.open(filepath, mode="r", encoding="latin-1")
+        result = re.findall('LibReference=(.*?)[|]', f.read())
+    except PermissionError:
+        result = []
+    except FileNotFoundError:
+        result = []
 
-print("tinyFG.SchLib:")
-for item in result:
-    print(item)
+    print(f"Parsing {filepath} for symbols: {len(result)} components found")
+    return result
 
-print("PcbLib1.PcbLib:")
-f = io.open("PcbLib1.PcbLib", mode="r", encoding="latin-1")
 
-result = re.findall('PATTERN=(.*?)[|]', f.read())
+def getFootprintRefList(filepath):
+    try:
+        f = io.open(filepath, mode="r", encoding="latin-1")
+        result = re.findall('PATTERN=(.*?)[|]', f.read())
+    except PermissionError:
+        result = []
+    except FileNotFoundError:
+        result = []
 
-for item in result:
-    print(item)
+    print(f"Parsing {filepath} for footprints: {len(result)} components found")
+    return result

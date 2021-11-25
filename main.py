@@ -1,14 +1,17 @@
 import tkinter
 import TKinterModernThemes as TKMT
 from tkinter import ttk
+from tkinter import filedialog
+import mysql.connector
+import glob
 import dk_api
 import mysql_query
 import json_appdata
-import mysql.connector
-from PIL import Image, ImageTk
+import altium_parser
+import utils
 
 permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
-                    "Library Ref", "Footprint Path", "Footprint Ref"]
+                   "Library Ref", "Footprint Path", "Footprint Ref"]
 
 
 def getDbTableList(mysql_cnx):
@@ -65,7 +68,6 @@ class App(TKMT.ThemedTKinterFrame):
             dkpn = supplier_pn_entry.get()
             print(f"Querying Digi-Key for {dkpn}")
             result = dk_api.fetchDigikeyData(dkpn, table_cbox.get(), strippedList(self.dbColumnNames, permanentParams))
-            print(result)
             for it in result:
                 try:
                     self.root.nametowidget(".nbk.f_home." + it[0].lower()).delete(0, 255)
@@ -128,17 +130,50 @@ class App(TKMT.ThemedTKinterFrame):
             if not self.connected:
                 notebook.tab(0, state='disabled')
 
+        def browseBtn():
+            dir = filedialog.askdirectory()
+            if dir:
+                search_path_entry.delete(0, 255)
+                search_path_entry.insert(0, dir)
+                print(f"New library search path set: {dir}")
+                updatePathComboboxes(dir)
+
+        def updatePathComboboxes(dirPath):
+            schlibFiles = glob.glob(dirPath + '/**/*.SchLib', recursive=True)
+            pcblibFiles = glob.glob(dirPath + '/**/*.PcbLib', recursive=True)
+            resultSchFiles = []
+            resultPcbFiles = []
+            for file in schlibFiles:
+                resultSchFiles.append(file[file.find('Symbols'):].replace('\\', '/', 255))
+            for file in pcblibFiles:
+                resultPcbFiles.append(file[file.find('Footprints'):].replace('\\', '/', 255))
+            library_path_cbox['values'] = resultSchFiles
+            footprint_path_cbox['values'] = resultPcbFiles
+
+        def updateLibraryRefCombobox(inp):
+            if self.libraryPathCurrentVal != inp:
+                self.libraryPathCurrentVal = inp
+                library_ref_cbox.delete(0, 255)
+                library_ref_cbox['values'] = altium_parser.getLibraryRefList(search_path_entry.get() + '/' + inp)
+            return True
+        updateLibraryRefCmd = self.root.register(updateLibraryRefCombobox)
+
+        def updateFootprintRefCombobox(inp):
+            if self.footprintPathCurrentVal != inp:
+                self.footprintPathCurrentVal = inp
+                footprint_ref_cbox.delete(0, 255)
+                footprint_ref_cbox['values'] = altium_parser.getFootprintRefList(search_path_entry.get() + '/' + inp)
+            return True
+        updateFootprintRefCmd = self.root.register(updateFootprintRefCombobox)
+
         self.connected = False
-
-        img_home = Image.open('home.png')
-        img_home.thumbnail(size=(32, 32))
-        ph_home = ImageTk.PhotoImage(img_home)
-        img_settings = Image.open('settings.png')
-        img_settings.thumbnail(size=(32, 32))
-        ph_settings = ImageTk.PhotoImage(img_settings)
-
         self.dbTableList = []
         self.dbColumnNames = []
+
+        self.root.tk.call('wm', 'iconbitmap', self.root._w, 'assets/app.ico')
+        ph_home = utils.loadImageTk('assets/home.png', (32, 32))
+        ph_settings = utils.loadImageTk('assets/settings.png', (32, 32))
+        ph_download = utils.loadImageTk('assets/download_cloud.png', (24, 24))
 
         # Create styles
         style = ttk.Style(self.master)
@@ -157,7 +192,7 @@ class App(TKMT.ThemedTKinterFrame):
 
         # Settings page widgets
         f_login = ttk.LabelFrame(f_settings, text="MySQL Server Login", name="f_login")
-        f_login.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
+        f_login.grid(row=0, column=0, columnspan=4, padx=10, pady=10, sticky='nsew')
 
         db_address_label = ttk.Label(f_login, text="Address:")
         db_address_label.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
@@ -182,6 +217,13 @@ class App(TKMT.ThemedTKinterFrame):
         login_test_button = ttk.Button(f_login, width=16, text="Test", command=testDbConnection)
         login_test_button.grid(row=4, column=0, padx=10, pady=10, sticky='nsew')
 
+        search_path_label = ttk.Label(f_settings, text="Library Search Path:")
+        search_path_label.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
+        search_path_entry = ttk.Entry(f_settings)
+        search_path_entry.grid(row=1, column=1, columnspan=2, padx=10, pady=10, sticky='nsew')
+        search_path_browse_button = ttk.Button(f_settings, text="Browse", command=browseBtn)
+        search_path_browse_button.grid(row=1, column=3, padx=10, pady=10, sticky='nsew')
+
         # Home page widgets
         table_label = ttk.Label(f_home, text="DB Table:")
         table_label.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
@@ -193,7 +235,7 @@ class App(TKMT.ThemedTKinterFrame):
         testDbConnection()
 
         db_button = ttk.Button(f_home, text="Add to database", command=addToDatabaseBtn)
-        db_button.grid(row=0, column=3, padx=10, pady=10, sticky='nsew')
+        db_button.grid(row=0, column=3, columnspan=2, padx=10, pady=10, sticky='nsew')
         db_button["state"] = "disabled"
 
         name_label = ttk.Label(f_home, text="Name:")
@@ -204,43 +246,48 @@ class App(TKMT.ThemedTKinterFrame):
         supplier_label = ttk.Label(f_home, text="Supplier 1:")
         supplier_label.grid(row=1, column=2, padx=10, pady=10, sticky='nsew')
         supplier_cbox = ttk.Combobox(f_home, state="readonly", name="supplier 1")
-        supplier_cbox.grid(row=1, column=3, padx=10, pady=10, sticky='nsew')
+        supplier_cbox.grid(row=1, column=3, columnspan=2, padx=10, pady=10, sticky='nsew')
         supplier_cbox['values'] = "Digi-Key"
         supplier_cbox.current(0)
 
         supplier_pn_label = ttk.Label(f_home, text="Supplier Part Number 1:")
         supplier_pn_label.grid(row=2, column=2, padx=10, pady=10, sticky='nsew')
         supplier_pn_entry = ttk.Entry(f_home, name="supplier part number 1")
-        supplier_pn_entry.grid(row=2, column=3, padx=10, pady=10, sticky='nsew')
+        supplier_pn_entry.grid(row=2, column=3, padx=(10, 0), pady=10, sticky='nsew')
         supplier_pn_entry.bind("<Return>", query_supplier_event)
 
-        supplier_button = ttk.Button(f_home, text="Autofill", command=query_supplier)
-        supplier_button.grid(row=2, column=4, padx=10, pady=10, sticky='nsew')
+        supplier_button = ttk.Button(f_home, image=ph_download, command=query_supplier)
+        supplier_button.grid(row=2, column=4, padx=(10, 10), pady=10, ipady=0, sticky='nsew')
 
-        library_path_label = ttk.Label(f_home, text="Library Path" + ":")
-        library_path_label.grid(row=3, column=2, padx=10, pady=10, sticky='nsew')
-        library_path_entry = ttk.Entry(f_home, name="library path")
-        library_path_entry.grid(row=3, column=3, padx=10, pady=10, sticky='nsew')
+        search_path_label = ttk.Label(f_home, text="Library Path" + ":")
+        search_path_label.grid(row=3, column=2, padx=10, pady=10, sticky='nsew')
+        library_path_cbox = ttk.Combobox(f_home, name="library path",
+                                         validate="all", validatecommand=(updateLibraryRefCmd, '%P'))
+        library_path_cbox.grid(row=3, column=3, columnspan=2, padx=10, pady=10, sticky='nsew')
 
         library_ref_label = ttk.Label(f_home, text="Library Ref" + ":")
         library_ref_label.grid(row=4, column=2, padx=10, pady=10, sticky='nsew')
-        library_ref_entry = ttk.Entry(f_home, name="library ref")
-        library_ref_entry.grid(row=4, column=3, padx=10, pady=10, sticky='nsew')
+        library_ref_cbox = ttk.Combobox(f_home, name="library ref")
+        library_ref_cbox.grid(row=4, column=3, columnspan=2, padx=10, pady=10, sticky='nsew')
 
         footprint_path_label = ttk.Label(f_home, text="Footprint Path" + ":")
         footprint_path_label.grid(row=5, column=2, padx=10, pady=10, sticky='nsew')
-        footprint_path_entry = ttk.Entry(f_home, name="footprint path")
-        footprint_path_entry.grid(row=5, column=3, padx=10, pady=10, sticky='nsew')
+        footprint_path_cbox = ttk.Combobox(f_home, name="footprint path",
+                                           validate="all", validatecommand=(updateFootprintRefCmd, '%P'))
+        footprint_path_cbox.grid(row=5, column=3, columnspan=2, padx=10, pady=10, sticky='nsew')
 
         footprint_ref_label = ttk.Label(f_home, text="Footprint Ref" + ":")
         footprint_ref_label.grid(row=6, column=2, padx=10, pady=10, sticky='nsew')
-        footprint_ref_entry = ttk.Entry(f_home, name="footprint ref")
-        footprint_ref_entry.grid(row=6, column=3, padx=10, pady=10, sticky='nsew')
+        footprint_ref_cbox = ttk.Combobox(f_home, name="footprint ref")
+        footprint_ref_cbox.grid(row=6, column=3, columnspan=2, padx=10, pady=10, sticky='nsew')
 
         db_save_button= ttk.Button(f_login, text="Save", command=saveDbLogins)
         db_save_button.grid(row=4, column=1, padx=10, pady=10, sticky='nsew')
 
         self.run()
+
+    libraryPathCurrentVal = ""
+    footprintPathCurrentVal = ""
 
 
 if __name__ == "__main__":

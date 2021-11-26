@@ -72,6 +72,8 @@ class App(TKMT.ThemedTKinterFrame):
 
         def updateTableViewFrame():
             tree = None
+            hsb = None
+            vsb = None
             dbDataCursor = mysql_query.getTableData(self.cnx, table_cbox.get())
 
             if tree is not None:
@@ -80,18 +82,20 @@ class App(TKMT.ThemedTKinterFrame):
                                 height=8, selectmode='browse', show='headings')
             tree.grid(row=0, column=0, padx=(10, 0), pady=(10, 0), rowspan=5, columnspan=5, sticky='nsew')
 
-            vsb = ttk.Scrollbar(f_tableView, orient='vertical', command=tree.yview)
-            vsb.grid(row=0, column=5, padx=0, pady=10, rowspan=5, sticky='nse')
-            tree.configure(yscrollcommand=vsb.set)
-
-            hsb = ttk.Scrollbar(f_tableView, orient='horizontal', command=tree.xview)
-            hsb.grid(row=5, column=0, padx=10, pady=0, columnspan=5, sticky='sew')
-            tree.configure(xscrollcommand=hsb.set)
-
             tree['columns'] = self.dbColumnNames
             for c in self.dbColumnNames:
                 tree.heading(c, text=c, anchor=tkinter.CENTER)
                 tree.column(c, width=80, minwidth=180)
+
+            if vsb is None:
+                vsb = ttk.Scrollbar(f_tableView, orient='vertical', command=tree.yview)
+                vsb.grid(row=0, column=5, padx=0, pady=10, rowspan=5, sticky='nse')
+                tree.configure(yscrollcommand=vsb.set)
+
+            if hsb is None:
+                hsb = ttk.Scrollbar(f_tableView, orient='horizontal', style='accent.Horizontal.TScrollbar', command=tree.xview)
+                hsb.grid(row=5, column=0, padx=10, pady=0, columnspan=5, sticky='sew')
+                tree.configure(xscrollcommand=hsb.set)
 
             data = dbDataCursor.fetchall()
             for d in data:
@@ -107,8 +111,8 @@ class App(TKMT.ThemedTKinterFrame):
             result = dk_api.fetchDigikeyData(dkpn, table_cbox.get(), strippedList(self.dbColumnNames, permanentParams))
             for it in result:
                 try:
-                    self.root.nametowidget(".nbk.f_home." + it[0].lower()).delete(0, 255)
-                    self.root.nametowidget(".nbk.f_home." + it[0].lower()).insert(0, it[1])
+                    self.root.nametowidget(".nbk.f_home.f_cc." + it[0].lower()).delete(0, 255)
+                    self.root.nametowidget(".nbk.f_home.f_cc." + it[0].lower()).insert(0, it[1])
                 except KeyError:
                     print(f"No widget named {it[0].lower()}")
 
@@ -213,6 +217,7 @@ class App(TKMT.ThemedTKinterFrame):
         style = ttk.Style(self.master)
         style.configure('lefttab.TNotebook', tabposition='wn', tabmargins=[-10, -5, -16, 0])
         style.configure('lefttab.TNotebook.Tab', padding=[0, 0])
+        style.configure('accent.Horizontal.TScrollbar', troughcolor='blue')
 
         notebook = ttk.Notebook(self.master, style='lefttab.TNotebook', name="nbk")
         notebook.grid(row=0, column=0, padx=0, pady=0, sticky='nsew')

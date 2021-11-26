@@ -16,7 +16,7 @@ capacitor_dict = {
 opamp_dict = {
     "Number of Circuits": "Nb Of Circuits",
     "Slew Rate": "Slew Rate",
-    "Voltage - Supply, Single/Dual (±)": "Voltage Supply",
+    "Voltage - Span (Max)": "Voltage Supply",
 }
 
 dictionary_map = {
@@ -36,6 +36,7 @@ def fetchDigikeyData(dkpn, tableName, dbColumnList):
         for p in part.parameters:
             p_dict = p.to_dict()
             param, value = p_dict['parameter'], p_dict['value']
+            print(f"{param}, {value}")
             if param in param_dict:
                 dk_data[param_dict[param]] = value
 
@@ -47,11 +48,13 @@ def fetchDigikeyData(dkpn, tableName, dbColumnList):
             elif column == "Manufacturer":
                 value = part.manufacturer.to_dict()['value']
             else:
-                value = dk_data[column]
+                try:
+                    value = dk_data[column]
+                except KeyError:
+                    value = ""
+                    print(f"No match found for \'{column}\'")
             result.append([column, value])
         return result
-    except KeyError:
-        print("Digi-Key API Request Failed: Wrong Part Category")
     except AttributeError:
         print("Digi-Key API Request Failed: No Results")
     return []

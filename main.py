@@ -63,10 +63,10 @@ class App(TKMT.ThemedTKinterFrame):
             for i, column in enumerate(dbColumnListCursor):
                 self.dbColumnNames.append(column[0])
                 if self.dbColumnNames[i] not in permanentParams:
-                    label = ttk.Label(f_createComponent, text=self.dbColumnNames[i] + ":",
+                    label = ttk.Label(f_componentEditor, text=self.dbColumnNames[i] + ":",
                                       name=(self.dbColumnNames[i].lower() + "_l"))
                     label.grid(row=row, column=0, padx=10, pady=10, sticky='nsew')
-                    entry = ttk.Entry(f_createComponent, name=self.dbColumnNames[i].lower())
+                    entry = ttk.Entry(f_componentEditor, name=self.dbColumnNames[i].lower())
                     entry.grid(row=row, column=1, columnspan=2, padx=10, pady=10, sticky='nsew')
                     row = row + 1
 
@@ -111,18 +111,19 @@ class App(TKMT.ThemedTKinterFrame):
             result = dk_api.fetchDigikeyData(dkpn, table_cbox.get(), strippedList(self.dbColumnNames, permanentParams))
             for it in result:
                 try:
-                    self.root.nametowidget(".nbk.f_home.f_cc." + it[0].lower()).delete(0, 255)
-                    self.root.nametowidget(".nbk.f_home.f_cc." + it[0].lower()).insert(0, it[1])
+                    self.root.nametowidget(str(f_componentEditor) + it[0].lower()).delete(0, 255)
+                    self.root.nametowidget(str(f_componentEditor) + it[0].lower()).insert(0, it[1])
                 except KeyError:
-                    print(f"No widget named {it[0].lower()}")
+                    print(f"Error: no field found for \'{it[0].lower()}\'")
 
         def addToDatabaseBtn():
             rowData = []
             for col in self.dbColumnNames:
                 try:
-                    rowData.append(self.root.nametowidget(".nbk.f_home." + col.lower()).get())
+                    rowData.append(self.root.nametowidget(str(f_componentEditor) + col.lower()).get())
                 except KeyError:
-                    print(f"No widget named {col.lower()}")
+                    print(f"Error: No field found for \'{col.lower()}\'")
+                    return
             mysql_query.insertInDatabase(self.cnx, table_cbox.get().lower(), self.dbColumnNames, rowData)
 
         def validateName(inp):
@@ -171,12 +172,21 @@ class App(TKMT.ThemedTKinterFrame):
                 notebook.tab(0, state='disabled')
 
         def browseBtn():
-            dir = filedialog.askdirectory()
-            if dir:
-                search_path_entry.delete(0, 255)
-                search_path_entry.insert(0, dir)
-                print(f"New library search path set: {dir}")
-                updatePathComboboxes(dir)
+            directory = filedialog.askdirectory()
+            if directory:
+                updateSearchPath(directory)
+                json_appdata.saveLibrarySearchPath(directory)
+
+        def getLibSearchPath():
+            self.searchPathDict = json_appdata.getLibrarySearchPath()
+            if 'filepath' in self.searchPathDict:
+                updateSearchPath(self.searchPathDict['filepath'])
+
+        def updateSearchPath(path):
+            search_path_entry.delete(0, 255)
+            search_path_entry.insert(0, path)
+            print(f"Library search path set: {path}")
+            updatePathComboboxes(path)
 
         def updatePathComboboxes(dirPath):
             schlibFiles = glob.glob(dirPath + '/**/*.SchLib', recursive=True)
@@ -269,8 +279,8 @@ class App(TKMT.ThemedTKinterFrame):
         search_path_browse_button.grid(row=1, column=3, padx=10, pady=10, sticky='nsew')
 
         # Home page widgets
-        f_createComponent = ttk.LabelFrame(f_home, text="Create New Component", name="f_cc")
-        f_createComponent.grid(row=0, column=0, padx=10, pady=10, columnspan=1, sticky='nsw')
+        f_componentEditor = ttk.LabelFrame(f_home, text="Component Editor", name="f_cc")
+        f_componentEditor.grid(row=0, column=0, padx=10, pady=10, columnspan=1, sticky='nsw')
         f_tableView = ttk.LabelFrame(f_home, text="Table View", name="f_tableView")
         f_tableView.grid(row=1, column=0, padx=10, pady=(0, 10), rowspan=5, columnspan=5, sticky='nsew')
         for i in range(5):
@@ -279,62 +289,64 @@ class App(TKMT.ThemedTKinterFrame):
             f_tableView.grid_columnconfigure(i, weight=1)
             f_tableView.grid_rowconfigure(i, weight=1)
 
-        table_label = ttk.Label(f_createComponent, text="DB Table:")
+        table_label = ttk.Label(f_componentEditor, text="DB Table:")
         table_label.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
-        table_cbox = ttk.Combobox(f_createComponent, width=25, state="readonly")
+        table_cbox = ttk.Combobox(f_componentEditor, width=25, state="readonly")
         table_cbox.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
         table_cbox.bind("<<ComboboxSelected>>", loadGUI)
 
         getDbLogins()
         testDbConnection()
 
-        db_button = ttk.Button(f_createComponent, text="Add to database", command=addToDatabaseBtn)
-        db_button.grid(row=0, column=4, columnspan=2, padx=10, pady=10, sticky='nsew')
+        db_button = ttk.Button(f_componentEditor, text="Add new entry",
+                               style=TKMT.ThemeStyles.ButtonStyles.AccentButton, command=addToDatabaseBtn)
+        db_button.grid(row=7, column=4, columnspan=2, padx=10, pady=10, sticky='nsew')
         db_button["state"] = "disabled"
 
-        name_label = ttk.Label(f_createComponent, text="Name:")
+        name_label = ttk.Label(f_componentEditor, text="Name:")
         name_label.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
-        name_entry = ttk.Entry(f_createComponent, name="name", validate="all", validatecommand=(valNameCmd, '%P'))
+        name_entry = ttk.Entry(f_componentEditor, name="name", validate="all", validatecommand=(valNameCmd, '%P'))
         name_entry.grid(row=1, column=1, columnspan=2, padx=10, pady=10, sticky='nsew')
 
-        supplier_label = ttk.Label(f_createComponent, text="Supplier 1:")
+        supplier_label = ttk.Label(f_componentEditor, text="Supplier 1:")
         supplier_label.grid(row=1, column=3, padx=10, pady=10, sticky='nsew')
-        supplier_cbox = ttk.Combobox(f_createComponent, state="readonly", name="supplier 1")
+        supplier_cbox = ttk.Combobox(f_componentEditor, state="readonly", name="supplier 1")
         supplier_cbox.grid(row=1, column=4, columnspan=2, padx=10, pady=10, sticky='nsew')
         supplier_cbox['values'] = "Digi-Key"
         supplier_cbox.current(0)
 
-        supplier_pn_label = ttk.Label(f_createComponent, text="Supplier Part Number 1:")
+        supplier_pn_label = ttk.Label(f_componentEditor, text="Supplier Part Number 1:")
         supplier_pn_label.grid(row=2, column=3, padx=10, pady=10, sticky='nsew')
-        supplier_pn_entry = ttk.Entry(f_createComponent, name="supplier part number 1")
+        supplier_pn_entry = ttk.Entry(f_componentEditor, name="supplier part number 1")
         supplier_pn_entry.grid(row=2, column=4, padx=(10, 0), pady=10, sticky='nsew')
         supplier_pn_entry.bind("<Return>", query_supplier_event)
 
-        supplier_button = ttk.Button(f_createComponent, image=ph_download, command=query_supplier)
+        supplier_button = ttk.Button(f_componentEditor, image=ph_download, command=query_supplier)
         supplier_button.grid(row=2, column=5, padx=(10, 10), pady=10, ipady=0, sticky='nsew')
 
-        search_path_label = ttk.Label(f_createComponent, text="Library Path" + ":")
+        search_path_label = ttk.Label(f_componentEditor, text="Library Path" + ":")
         search_path_label.grid(row=3, column=3, padx=10, pady=10, sticky='nsew')
-        library_path_cbox = ttk.Combobox(f_createComponent, name="library path",
+        library_path_cbox = ttk.Combobox(f_componentEditor, name="library path",
                                          validate="all", validatecommand=(updateLibraryRefCmd, '%P'))
         library_path_cbox.grid(row=3, column=4, columnspan=2, padx=10, pady=10, sticky='nsew')
 
-        library_ref_label = ttk.Label(f_createComponent, text="Library Ref" + ":")
+        library_ref_label = ttk.Label(f_componentEditor, text="Library Ref" + ":")
         library_ref_label.grid(row=4, column=3, padx=10, pady=10, sticky='nsew')
-        library_ref_cbox = ttk.Combobox(f_createComponent, name="library ref")
+        library_ref_cbox = ttk.Combobox(f_componentEditor, name="library ref")
         library_ref_cbox.grid(row=4, column=4, columnspan=2, padx=10, pady=10, sticky='nsew')
 
-        footprint_path_label = ttk.Label(f_createComponent, text="Footprint Path" + ":")
+        footprint_path_label = ttk.Label(f_componentEditor, text="Footprint Path" + ":")
         footprint_path_label.grid(row=5, column=3, padx=10, pady=10, sticky='nsew')
-        footprint_path_cbox = ttk.Combobox(f_createComponent, name="footprint path",
+        footprint_path_cbox = ttk.Combobox(f_componentEditor, name="footprint path",
                                            validate="all", validatecommand=(updateFootprintRefCmd, '%P'))
         footprint_path_cbox.grid(row=5, column=4, columnspan=2, padx=10, pady=10, sticky='nsew')
 
-        footprint_ref_label = ttk.Label(f_createComponent, text="Footprint Ref" + ":")
+        footprint_ref_label = ttk.Label(f_componentEditor, text="Footprint Ref" + ":")
         footprint_ref_label.grid(row=6, column=3, padx=10, pady=10, sticky='nsew')
-        footprint_ref_cbox = ttk.Combobox(f_createComponent, name="footprint ref")
+        footprint_ref_cbox = ttk.Combobox(f_componentEditor, name="footprint ref")
         footprint_ref_cbox.grid(row=6, column=4, columnspan=2, padx=10, pady=10, sticky='nsew')
 
+        getLibSearchPath()
         self.run()
 
     libraryPathCurrentVal = ""

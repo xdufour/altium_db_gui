@@ -1,3 +1,4 @@
+import MySQLdb
 import mysql.connector.errors
 from mysql.connector import (connection)
 
@@ -45,7 +46,10 @@ def insertInDatabase(cnx, table_name, headers, data):
     query = query[:len(query) - 2]
     query += ")"
     print("SQL Query:" + query)
-    cursor.execute(query, data)
-    cnx.commit()
-    print(cursor.rowcount, " record inserted")
+    try:
+        cursor.execute(query, data)
+        cnx.commit()
+        print(cursor.rowcount, " record inserted")
+    except MySQLdb.ProgrammingError:
+        print("SQL Query Insert Failure")
 

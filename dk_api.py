@@ -36,7 +36,6 @@ def fetchDigikeyData(dkpn, tableName, dbColumnList):
         for p in part.parameters:
             p_dict = p.to_dict()
             param, value = p_dict['parameter'], p_dict['value']
-            print(f"{param}, {value}")
             if param in param_dict:
                 dk_data[param_dict[param]] = value
 

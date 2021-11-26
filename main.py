@@ -46,24 +46,57 @@ class App(TKMT.ThemedTKinterFrame):
         self.dbColumnNames = []
 
         def loadGUI(event):
-            dbColumnList = mysql_query.getTableColumns(self.cnx, table_cbox.get().lower())
+            updateCreateComponentFrame()
+            updateTableViewFrame()
+            print(f"Loaded GUI for {table_cbox.get()}")
+
+        def updateCreateComponentFrame():
             row = 2
+            dbColumnListCursor = mysql_query.getTableColumns(self.cnx, table_cbox.get())
             # Delete any previously created widgets
             for column in self.dbColumnNames:
                 if column not in permanentParams:
-                    self.root.nametowidget(".nbk.f_home." + column.lower()).destroy()
-                    self.root.nametowidget(".nbk.f_home." + column.lower() + "_l").destroy()
+                    self.root.nametowidget(".nbk.f_home.f_cc." + column.lower()).destroy()
+                    self.root.nametowidget(".nbk.f_home.f_cc." + column.lower() + "_l").destroy()
             self.dbColumnNames.clear()
             # Create widgets
-            for i, column in enumerate(dbColumnList):
+            for i, column in enumerate(dbColumnListCursor):
                 self.dbColumnNames.append(column[0])
                 if self.dbColumnNames[i] not in permanentParams:
-                    label = ttk.Label(f_home, text=self.dbColumnNames[i] + ":", name=(self.dbColumnNames[i].lower() + "_l"))
+                    label = ttk.Label(f_createComponent, text=self.dbColumnNames[i] + ":",
+                                      name=(self.dbColumnNames[i].lower() + "_l"))
                     label.grid(row=row, column=0, padx=10, pady=10, sticky='nsew')
-                    entry = ttk.Entry(f_home, name=self.dbColumnNames[i].lower())
+                    entry = ttk.Entry(f_createComponent, name=self.dbColumnNames[i].lower())
                     entry.grid(row=row, column=1, columnspan=2, padx=10, pady=10, sticky='nsew')
                     row = row + 1
-            print(f"Loaded GUI for {table_cbox.get()}")
+
+        def updateTableViewFrame():
+            tree = None
+            dbDataCursor = mysql_query.getTableData(self.cnx, table_cbox.get())
+
+            if tree is not None:
+                tree.destroy()
+            tree = ttk.Treeview(f_tableView, columns=self.dbColumnNames, name='f_tv',
+                                height=8, selectmode='browse', show='headings')
+            tree.grid(row=0, column=0, padx=(10, 0), pady=(10, 0), rowspan=5, columnspan=5, sticky='nsew')
+
+            vsb = ttk.Scrollbar(f_tableView, orient='vertical', command=tree.yview)
+            vsb.grid(row=0, column=5, padx=0, pady=10, rowspan=5, sticky='nse')
+            tree.configure(yscrollcommand=vsb.set)
+
+            hsb = ttk.Scrollbar(f_tableView, orient='horizontal', command=tree.xview)
+            hsb.grid(row=5, column=0, padx=10, pady=0, columnspan=5, sticky='sew')
+            tree.configure(xscrollcommand=hsb.set)
+
+            tree['columns'] = self.dbColumnNames
+            for c in self.dbColumnNames:
+                tree.heading(c, text=c, anchor=tkinter.CENTER)
+                tree.column(c, width=80, minwidth=180)
+
+            data = dbDataCursor.fetchall()
+            for d in data:
+                print(d)
+                tree.insert(parent='', index=tkinter.END, text='', values=d)
 
         def query_supplier_event(event):
             query_supplier()
@@ -182,7 +215,7 @@ class App(TKMT.ThemedTKinterFrame):
         style.configure('lefttab.TNotebook.Tab', padding=[0, 0])
 
         notebook = ttk.Notebook(self.master, style='lefttab.TNotebook', name="nbk")
-        notebook.grid(row=0, column=0, rowspan=5, columnspan=5, padx=0, pady=0, sticky='nsew')
+        notebook.grid(row=0, column=0, padx=0, pady=0, sticky='nsew')
         f_home = ttk.Frame(notebook, name="f_home")
         f_settings = ttk.Frame(notebook, name="f_settings")
         f_home.pack(fill='both', expand=True)
@@ -190,6 +223,8 @@ class App(TKMT.ThemedTKinterFrame):
 
         notebook.add(f_home, image=ph_home, compound=tkinter.TOP)
         notebook.add(f_settings, image=ph_settings, compound=tkinter.TOP)
+        notebook.grid_columnconfigure(0, weight=1)
+        notebook.grid_columnconfigure(1, weight=1)
 
         # Settings page widgets
         f_login = ttk.LabelFrame(f_settings, text="MySQL Server Login", name="f_login")
@@ -229,60 +264,70 @@ class App(TKMT.ThemedTKinterFrame):
         search_path_browse_button.grid(row=1, column=3, padx=10, pady=10, sticky='nsew')
 
         # Home page widgets
-        table_label = ttk.Label(f_home, text="DB Table:")
+        f_createComponent = ttk.LabelFrame(f_home, text="Create New Component", name="f_cc")
+        f_createComponent.grid(row=0, column=0, padx=10, pady=10, columnspan=1, sticky='nsw')
+        f_tableView = ttk.LabelFrame(f_home, text="Table View", name="f_tableView")
+        f_tableView.grid(row=1, column=0, padx=10, pady=(0, 10), rowspan=5, columnspan=5, sticky='nsew')
+        for i in range(5):
+            f_home.grid_columnconfigure(i, weight=1)
+            f_home.grid_rowconfigure(i, weight=1)
+            f_tableView.grid_columnconfigure(i, weight=1)
+            f_tableView.grid_rowconfigure(i, weight=1)
+
+        table_label = ttk.Label(f_createComponent, text="DB Table:")
         table_label.grid(row=0, column=0, padx=10, pady=10, sticky='nsew')
-        table_cbox = ttk.Combobox(f_home, width=25, state="readonly")
+        table_cbox = ttk.Combobox(f_createComponent, width=25, state="readonly")
         table_cbox.grid(row=0, column=1, padx=10, pady=10, sticky='nsew')
         table_cbox.bind("<<ComboboxSelected>>", loadGUI)
 
         getDbLogins()
         testDbConnection()
 
-        db_button = ttk.Button(f_home, text="Add to database", command=addToDatabaseBtn)
+        db_button = ttk.Button(f_createComponent, text="Add to database", command=addToDatabaseBtn)
         db_button.grid(row=0, column=4, columnspan=2, padx=10, pady=10, sticky='nsew')
         db_button["state"] = "disabled"
 
-        name_label = ttk.Label(f_home, text="Name:")
+        name_label = ttk.Label(f_createComponent, text="Name:")
         name_label.grid(row=1, column=0, padx=10, pady=10, sticky='nsew')
-        name_entry = ttk.Entry(f_home, name="name", validate="all", validatecommand=(valNameCmd, '%P'))
+        name_entry = ttk.Entry(f_createComponent, name="name", validate="all", validatecommand=(valNameCmd, '%P'))
         name_entry.grid(row=1, column=1, columnspan=2, padx=10, pady=10, sticky='nsew')
 
-        supplier_label = ttk.Label(f_home, text="Supplier 1:")
+        supplier_label = ttk.Label(f_createComponent, text="Supplier 1:")
         supplier_label.grid(row=1, column=3, padx=10, pady=10, sticky='nsew')
-        supplier_cbox = ttk.Combobox(f_home, state="readonly", name="supplier 1")
+        supplier_cbox = ttk.Combobox(f_createComponent, state="readonly", name="supplier 1")
         supplier_cbox.grid(row=1, column=4, columnspan=2, padx=10, pady=10, sticky='nsew')
         supplier_cbox['values'] = "Digi-Key"
         supplier_cbox.current(0)
 
-        supplier_pn_label = ttk.Label(f_home, text="Supplier Part Number 1:")
+        supplier_pn_label = ttk.Label(f_createComponent, text="Supplier Part Number 1:")
         supplier_pn_label.grid(row=2, column=3, padx=10, pady=10, sticky='nsew')
-        supplier_pn_entry = ttk.Entry(f_home, name="supplier part number 1")
+        supplier_pn_entry = ttk.Entry(f_createComponent, name="supplier part number 1")
         supplier_pn_entry.grid(row=2, column=4, padx=(10, 0), pady=10, sticky='nsew')
         supplier_pn_entry.bind("<Return>", query_supplier_event)
 
-        supplier_button = ttk.Button(f_home, image=ph_download, command=query_supplier)
+        supplier_button = ttk.Button(f_createComponent, image=ph_download, command=query_supplier)
         supplier_button.grid(row=2, column=5, padx=(10, 10), pady=10, ipady=0, sticky='nsew')
 
-        search_path_label = ttk.Label(f_home, text="Library Path" + ":")
+        search_path_label = ttk.Label(f_createComponent, text="Library Path" + ":")
         search_path_label.grid(row=3, column=3, padx=10, pady=10, sticky='nsew')
-        library_path_cbox = ttk.Combobox(f_home, name="library path",
+        library_path_cbox = ttk.Combobox(f_createComponent, name="library path",
                                          validate="all", validatecommand=(updateLibraryRefCmd, '%P'))
         library_path_cbox.grid(row=3, column=4, columnspan=2, padx=10, pady=10, sticky='nsew')
 
-        library_ref_label = ttk.Label(f_home, text="Library Ref" + ":")
+        library_ref_label = ttk.Label(f_createComponent, text="Library Ref" + ":")
         library_ref_label.grid(row=4, column=3, padx=10, pady=10, sticky='nsew')
-        library_ref_cbox = ttk.Combobox(f_home, name="library ref")
+        library_ref_cbox = ttk.Combobox(f_createComponent, name="library ref")
         library_ref_cbox.grid(row=4, column=4, columnspan=2, padx=10, pady=10, sticky='nsew')
 
-        footprint_path_label = ttk.Label(f_home, text="Footprint Path" + ":")
+        footprint_path_label = ttk.Label(f_createComponent, text="Footprint Path" + ":")
         footprint_path_label.grid(row=5, column=3, padx=10, pady=10, sticky='nsew')
-        footprint_path_cbox = ttk.Combobox(f_home, name="footprint path",
+        footprint_path_cbox = ttk.Combobox(f_createComponent, name="footprint path",
                                            validate="all", validatecommand=(updateFootprintRefCmd, '%P'))
         footprint_path_cbox.grid(row=5, column=4, columnspan=2, padx=10, pady=10, sticky='nsew')
 
-        footprint_ref_label = ttk.Label(f_home, text="Footprint Ref" + ":")
+        footprint_ref_label = ttk.Label(f_createComponent, text="Footprint Ref" + ":")
         footprint_ref_label.grid(row=6, column=3, padx=10, pady=10, sticky='nsew')
-        footprint_ref_cbox = ttk.Combobox(f_home, name="footprint ref")
+        footprint_ref_cbox = ttk.Combobox(f_createComponent, name="footprint ref")
         footprint_ref_cbox.grid(row=6, column=4, columnspan=2, padx=10, pady=10, sticky='nsew')
 
         self.run()

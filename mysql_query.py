@@ -25,6 +25,14 @@ def getTableColumns(cnx, table):
     return cursor
 
 
+def getTableData(cnx, table):
+    cursor = cnx.cursor(buffered=True)
+    query = "SELECT * FROM `altium_db_library`.`" + table + "`"
+    print("SQL Query: " + query)
+    cursor.execute(query)
+    return cursor
+
+
 def insertInDatabase(cnx, table_name, headers, data):
     cursor = cnx.cursor()
     query = "INSERT INTO `altium_db_library`.`" + table_name + "` ("

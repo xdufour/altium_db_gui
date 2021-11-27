@@ -1,4 +1,5 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox, QTableWidget, QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem,\
+    QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt, QFile, QTextStream, QObject, QSize
 from PyQt5.QtGui import QFont
@@ -56,20 +57,20 @@ class App:
 
         def loadGUI(componentName):
             updateCreateComponentFrame()
-            # updateTableViewFrame()
+            updateTableViewFrame()
             print(f"Loaded GUI for {componentName}")
 
         def updateCreateComponentFrame():
             row = 2
-            dbColumnListCursor = mysql_query.getTableColumns(self.cnx, tableCombobox.currentText())
+            dbColumnListCursor = mysql_query.getTableColumns(self.cnx, tableNameCombobox.currentText())
             # Delete any previously created widgets
             for k in labels:
                 labels[k].deleteLater()
+            labels.clear()
             for k in lineEdits:
                 lineEdits[k].deleteLater()
-            self.dbColumnNames.clear()
-            labels.clear()
             lineEdits.clear()
+            self.dbColumnNames.clear()
             # Create widgets
             for i, column in enumerate(dbColumnListCursor):
                 self.dbColumnNames.append(column[0])
@@ -82,15 +83,36 @@ class App:
                     componentEditorGridLayout.addWidget(lineEdit, row, 1)
                     row += 1
 
+        def updateTableViewFrame():
+            table = None
+            dbDataCursor = mysql_query.getTableData(self.cnx, tableNameCombobox.currentText())
+            data = dbDataCursor.fetchall()
+
+            if table is not None:
+                table.deleteLater()
+
+            table = QTableWidget(len(data), len(self.dbColumnNames))
+            tableGroupBoxVLayout.addWidget(table)
+
+            table.setHorizontalHeaderLabels(self.dbColumnNames)
+            for row, cellData in enumerate(data):
+                for column, cellData in enumerate(cellData):
+                    item = QTableWidgetItem(cellData)
+                    table.setItem(row, column, item)
+
+            table.setSortingEnabled(True)
+            table.setCornerButtonEnabled(False)
+
         def query_supplier():
             dkpn = ceSupplierPnLineEdit.text()
             print(f"Querying Digi-Key for {dkpn}")
-            result = dk_api.fetchDigikeyData(dkpn, tableCombobox.currentText(), utils.strippedList(self.dbColumnNames, permanentParams))
-            for param in result:
+            result = dk_api.fetchDigikeyData(dkpn, tableNameCombobox.currentText(), utils.strippedList(self.dbColumnNames, permanentParams))
+            for columnName, value in result:
                 try:
-                    lineEdits[param[0].lower()].setText(param[1])
+                    lineEdits[columnName.lower()].setText(value)
+                    lineEdits[columnName.lower()].setCursorPosition(0)
                 except KeyError:
-                    print(f"Error: no field found for \'{param[0].lower()}\'")
+                    print(f"Error: no field found for \'{columnName.lower()}\'")
 
         def addToDatabaseClicked():
             rowData = []
@@ -100,14 +122,14 @@ class App:
                 except KeyError:
                     print(f"Error: No field found for \'{col.lower()}\'")
                     return
-            mysql_query.insertInDatabase(self.cnx, tableCombobox.currentText(), self.dbColumnNames, rowData)
+            mysql_query.insertInDatabase(self.cnx, tableNameCombobox.currentText(), self.dbColumnNames, rowData)
 
         def validateName(name):
             ceAddButton.setEnabled(len(name) > 0)
 
         def loadDbTables():
             self.dbTableList = getDbTableList(self.cnx)
-            tableCombobox.addItems(self.dbTableList)
+            tableNameCombobox.addItems(self.dbTableList)
 
         def loadDbLogins():
             self.loginInfoDict = json_appdata.getDatabaseLoginInfo()
@@ -125,22 +147,26 @@ class App:
         def testDbConnection():
             if not self.connected and not utils.dictHasEmptyValue(self.loginInfoDict):
                 try:
-                    self.cnx = mysql_query.init(self.loginInfoDict['user'],
-                                                self.loginInfoDict['password'],
-                                                self.loginInfoDict['address'],
-                                                self.loginInfoDict['database'])
+                    self.cnx = mysql_query.init(dbUserLineEdit.text(),
+                                                dbPasswordLineEdit.text(),
+                                                dbAddressLineEdit.text(),
+                                                dbNameLineEdit.text())
                     if self.cnx.is_connected:
                         self.connected = True
                         print("Connected to database successfully")
                         loadDbTables()
                         dbTestButton.setDisabled(True)
-                        # notebook.tab(0, state='normal')
+                        dbTestButton.setText("Connected")
+                        loginGroupBox.setProperty('valid', True)
+                        loginGroupBox.style().unpolish(loginGroupBox)
+                        loginGroupBox.style().polish(loginGroupBox)
+                        tabWidget.setTabEnabled(0, True)
                 except mysql.connector.errors.ProgrammingError:
                     print("Access Denied")
                 except mysql.connector.errors.InterfaceError:
                     print("Invalid Login Information Format")
-            # if not self.connected:
-                # notebook.tab(0, state='disabled')
+            if not self.connected:
+                tabWidget.setTabEnabled(0, False)
 
         def browseBtn():
             print("BrowseBtn")
@@ -198,7 +224,6 @@ class App:
         tabWidget.addTab(settingsWidget, '')
         tabWidget.setTabIcon(1, settingsIcon)
         tabWidget.setIconSize(QtCore.QSize(64, 64))
-        tabWidget.show()
 
         # Settings page widgets
         settingsVLayout = QVBoxLayout()
@@ -211,7 +236,6 @@ class App:
         loginGroupBox.setAlignment(Qt.AlignLeft)
 
         settingsTopHLayout.addWidget(loginGroupBox, 0)
-        settingsTopHLayout.addStretch(1)
         loginGridLayout = QGridLayout()
         loginGroupBox.setLayout(loginGridLayout)
         loginGridLayout.setColumnMinimumWidth(1, 50)
@@ -248,13 +272,13 @@ class App:
 
         settingsTopRightVLayout = QVBoxLayout()
         searchPathHLayout = QHBoxLayout()
-        settingsTopHLayout.addLayout(settingsTopRightVLayout)
+        settingsTopHLayout.addLayout(settingsTopRightVLayout, 1)
         settingsTopRightVLayout.addLayout(searchPathHLayout)
         settingsTopRightVLayout.addStretch(1)
         searchPathLabel = QLabel("Library Search Path:")
-        searchPathHLayout.addWidget(searchPathLabel)
+        searchPathHLayout.addWidget(searchPathLabel, 0, Qt.AlignLeft)
         searchPathLineEdit = QLineEdit()
-        searchPathHLayout.addWidget(searchPathLineEdit, 10)
+        searchPathHLayout.addWidget(searchPathLineEdit, 1)
         searchPathButton = QPushButton("Browse")
         searchPathButton.released.connect(browseBtn)
         searchPathHLayout.addWidget(searchPathButton)
@@ -272,19 +296,17 @@ class App:
         hometopHLayout.addWidget(componentEditorGroupBox)
 
         tableGroupBox = QGroupBox("Table View")
+        homeVLayout.addSpacing(20)
         homeVLayout.addWidget(tableGroupBox)
 
         tableGroupBoxVLayout = QVBoxLayout()
         tableGroupBox.setLayout(tableGroupBoxVLayout)
 
-        tableWidget = QTableWidget()
-        tableGroupBoxVLayout.addWidget(tableWidget)
-
         tableLabel = QLabel("DB Table:")
         componentEditorGridLayout.addWidget(tableLabel, 0, 0)
-        tableCombobox = QComboBox()
-        tableCombobox.currentTextChanged.connect(loadGUI)
-        componentEditorGridLayout.addWidget(tableCombobox, 0, 1)
+        tableNameCombobox = QComboBox()
+        tableNameCombobox.currentTextChanged.connect(loadGUI)
+        componentEditorGridLayout.addWidget(tableNameCombobox, 0, 1)
 
         loadDbLogins()
         testDbConnection()
@@ -343,8 +365,11 @@ class App:
         ceFootprintRefCombobox = QComboBox()
         componentEditorGridLayout.addWidget(ceFootprintRefCombobox, 6, 4, 1, 2)
 
+        componentEditorGridLayout.setSpacing(20)
+
         getLibSearchPath()
 
+        tabWidget.show()
         sys.exit(app.exec())
 
 

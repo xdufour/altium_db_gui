@@ -52,7 +52,6 @@ def getLibrarySearchPath():
         with open(lib_search_path_filename, 'r') as openfile:
             json_object = json.load(openfile)
         print("Loaded Altium search path info from json file:")
-        print(json_object)
     except FileNotFoundError:
         print("MySQL login information not configured")
     return json_object

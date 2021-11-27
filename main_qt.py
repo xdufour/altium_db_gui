@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem,\
-    QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget
+    QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget, QFileDialog, QDialog
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt, QFile, QTextStream, QObject, QSize
 from PyQt5.QtGui import QFont
@@ -166,11 +166,12 @@ class App:
                 tabWidget.setTabEnabled(0, False)
 
         def browseBtn():
-            print("BrowseBtn")
-            #directory = filedialog.askdirectory()
-            #if directory:
-                #updateSearchPath(directory)
-                #json_appdata.saveLibrarySearchPath(directory)
+            dialog = QFileDialog()
+            dialog.setFileMode(QFileDialog.DirectoryOnly)
+            if dialog.exec_() == QDialog.Accepted:
+                directory = dialog.selectedFiles()[0]
+                updateSearchPath(directory)
+                json_appdata.saveLibrarySearchPath(directory)
 
         def getLibSearchPath():
             self.searchPathDict = json_appdata.getLibrarySearchPath()
@@ -208,9 +209,16 @@ class App:
         stream = QTextStream(file)
         app.setStyleSheet(stream.readAll())
 
+        mainWindow = QWidget()
+        mainWindow.setProperty('mainWindow', True)
+        mainLayout = QVBoxLayout()
+        mainLayout.setContentsMargins(0, 0, 0, 0)
+        mainWindow.setLayout(mainLayout)
+
         tabWidget = QTabWidget()
         tabWidget.setMinimumSize(1920, 1080)
         tabWidget.setTabPosition(QTabWidget.West)
+        mainLayout.addWidget(tabWidget)
 
         homeWidget = QWidget()
         settingsWidget = QWidget()
@@ -368,7 +376,7 @@ class App:
 
         getLibSearchPath()
 
-        tabWidget.show()
+        mainWindow.show()
         sys.exit(app.exec())
 
 

@@ -22,14 +22,6 @@ def getDbTableList(mysql_cnx):
     return dbTableList
 
 
-def strippedList(srcList, unwantedList):
-    dstList = []
-    for it in srcList:
-        if it not in unwantedList:
-            dstList.append(it)
-    return dstList
-
-
 class App(TKMT.ThemedTKinterFrame):
     def __init__(self, theme, mode, usecommandlineargs=False, usethemeconfigfile=False):
         super().__init__(str("Altium DB GUI"), theme, mode, usecommandlineargs, usethemeconfigfile)
@@ -108,7 +100,7 @@ class App(TKMT.ThemedTKinterFrame):
         def query_supplier():
             dkpn = supplier_pn_entry.get()
             print(f"Querying Digi-Key for {dkpn}")
-            result = dk_api.fetchDigikeyData(dkpn, table_cbox.get(), strippedList(self.dbColumnNames, permanentParams))
+            result = dk_api.fetchDigikeyData(dkpn, table_cbox.get(), utils.strippedList(self.dbColumnNames, permanentParams))
             for it in result:
                 try:
                     self.root.nametowidget(str(f_componentEditor) + it[0].lower()).delete(0, 255)

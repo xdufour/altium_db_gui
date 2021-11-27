@@ -1,83 +1,352 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox, QTableWidget, QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget
 from PyQt5 import QtCore, QtGui
-from PyQt5.QtCore import Qt, QFile, QTextStream
+from PyQt5.QtCore import Qt, QFile, QTextStream, QObject, QSize
 from PyQt5.QtGui import QFont
 import sys
+import glob
 import breeze_resources
 import utils
+import json_appdata
+import mysql_query
+import mysql
+import altium_parser
+import dk_api
+
+permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
+                   "Library Ref", "Footprint Path", "Footprint Ref"]
+
+labels = {}
+lineEdits = {}
+
+def getDbTableList(mysql_cnx):
+    dbTableList = []
+    dbTableCursor = mysql_query.getDatabaseTables(mysql_cnx)
+    for it in dbTableCursor:
+        dbTableList.append(it[0])
+    return dbTableList
 
 
-def main():
-    app = QApplication(sys.argv)
+class App:
+    def __init__(self):
+        app = QApplication(sys.argv)
 
-    appIcon = utils.loadQIcon('assets/app.ico')
-    homeIcon = utils.loadQIcon('assets/home_rotated.png')
-    settingsIcon = utils.loadQIcon('assets/settings_rotated.png')
+        appIcon = utils.loadQIcon('assets/app.ico')
+        homeIcon = utils.loadQIcon('assets/home_rotated.png')
+        settingsIcon = utils.loadQIcon('assets/settings_rotated.png')
+        downloadIcon = utils.loadQIcon('assets/download_cloud.png')
 
-    app.setApplicationDisplayName("Altium DB GUI")
-    app.setWindowIcon(appIcon)
+        app.setApplicationDisplayName("Altium DB GUI")
+        app.setWindowIcon(appIcon)
 
-    app.setFont(QFont('Arial', 11))
+        app.setFont(QFont('Arial', 11))
 
-    # set stylesheet
-    file = QFile(":/dark/stylesheet.qss")
-    file.open(QFile.ReadOnly | QFile.Text)
-    stream = QTextStream(file)
-    app.setStyleSheet(stream.readAll())
+        self.connected = False
+        self.loginInfoDict = {}
 
-    # code goes here
-    tabWidget = QTabWidget()
-    tabWidget.setMinimumSize(1920, 1080)
-    tabWidget.setTabPosition(QTabWidget.West)
+        self.loginInfoDict = {
+            "address": "",
+            "user": "",
+            "password": "",
+            "database": ""
+        }
 
-    homeWidget = QWidget()
-    settingsWidget = QWidget()
+        self.connected = False
+        self.dbTableList = []
+        self.dbColumnNames = []
 
-    tabWidget.addTab(homeWidget, '')
-    tabWidget.setTabIcon(0, homeIcon)
-    tabWidget.addTab(settingsWidget, '')
-    tabWidget.setTabIcon(1, settingsIcon)
-    tabWidget.setIconSize(QtCore.QSize(64, 64))
-    tabWidget.show()
+        def loadGUI(componentName):
+            updateCreateComponentFrame()
+            # updateTableViewFrame()
+            print(f"Loaded GUI for {componentName}")
 
-    # Settings page widgets
-    settingsVLayout = QVBoxLayout()
-    settingsTopHLayout = QHBoxLayout()
-    settingsWidget.setLayout(settingsVLayout)
-    settingsVLayout.addLayout(settingsTopHLayout)
-    settingsVLayout.addStretch(1)
+        def updateCreateComponentFrame():
+            row = 2
+            dbColumnListCursor = mysql_query.getTableColumns(self.cnx, tableCombobox.currentText())
+            # Delete any previously created widgets
+            for k in labels:
+                labels[k].deleteLater()
+            for k in lineEdits:
+                lineEdits[k].deleteLater()
+            self.dbColumnNames.clear()
+            labels.clear()
+            lineEdits.clear()
+            # Create widgets
+            for i, column in enumerate(dbColumnListCursor):
+                self.dbColumnNames.append(column[0])
+                if self.dbColumnNames[i] not in permanentParams:
+                    label = QLabel(self.dbColumnNames[i] + ":")
+                    labels[self.dbColumnNames[i].lower()] = label
+                    lineEdit = QLineEdit()
+                    lineEdits[self.dbColumnNames[i].lower()] = lineEdit
+                    componentEditorGridLayout.addWidget(label, row, 0)
+                    componentEditorGridLayout.addWidget(lineEdit, row, 1)
+                    row += 1
 
-    loginGroupBox = QGroupBox("MySQL Server Login")
-    loginGroupBox.setAlignment(Qt.AlignLeft)
-    settingsTopHLayout.addWidget(loginGroupBox, 0)
-    settingsTopHLayout.addStretch(1)
-    loginGridLayout = QGridLayout()
-    loginGroupBox.setLayout(loginGridLayout)
-    loginGridLayout.setColumnMinimumWidth(1, 50)
-    loginGridLayout.setSpacing(20)
+        def query_supplier():
+            dkpn = ceSupplierPnLineEdit.text()
+            print(f"Querying Digi-Key for {dkpn}")
+            result = dk_api.fetchDigikeyData(dkpn, tableCombobox.currentText(), utils.strippedList(self.dbColumnNames, permanentParams))
+            for param in result:
+                try:
+                    lineEdits[param[0].lower()].setText(param[1])
+                except KeyError:
+                    print(f"Error: no field found for \'{param[0].lower()}\'")
 
-    dbAddressLabel = QLabel("Address:")
-    dbAddressLineEdit = QLineEdit()
-    loginGridLayout.addWidget(dbAddressLabel, 0, 0)
-    loginGridLayout.addWidget(dbAddressLineEdit, 0, 2)
+        def addToDatabaseClicked():
+            rowData = []
+            for col in self.dbColumnNames:
+                try:
+                    rowData.append(QLineEdit(lineEdits[col.lower()]).text())
+                except KeyError:
+                    print(f"Error: No field found for \'{col.lower()}\'")
+                    return
+            mysql_query.insertInDatabase(self.cnx, tableCombobox.currentText(), self.dbColumnNames, rowData)
 
-    dbUserLabel = QLabel("User:")
-    dbUserLineEdit = QLineEdit()
-    loginGridLayout.addWidget(dbUserLabel, 1, 0)
-    loginGridLayout.addWidget(dbUserLineEdit, 1, 2)
+        def validateName(name):
+            ceAddButton.setEnabled(len(name) > 0)
 
-    dbPasswordLabel = QLabel("Password:")
-    dbPasswordLineEdit = QLineEdit()
-    loginGridLayout.addWidget(dbPasswordLabel, 2, 0)
-    loginGridLayout.addWidget(dbPasswordLineEdit, 2, 2)
+        def loadDbTables():
+            self.dbTableList = getDbTableList(self.cnx)
+            tableCombobox.addItems(self.dbTableList)
 
-    dbNameLabel = QLabel("Database:")
-    dbNameLineEdit = QLineEdit()
-    loginGridLayout.addWidget(dbNameLabel, 3, 0)
-    loginGridLayout.addWidget(dbNameLineEdit, 3, 2)
+        def loadDbLogins():
+            self.loginInfoDict = json_appdata.getDatabaseLoginInfo()
+            dbAddressLineEdit.insert(self.loginInfoDict['address'])
+            dbUserLineEdit.insert(self.loginInfoDict['user'])
+            dbPasswordLineEdit.insert(self.loginInfoDict['password'])
+            dbNameLineEdit.insert(self.loginInfoDict['database'])
 
-    sys.exit(app.exec())
+        def saveDbLogins():
+            json_appdata.saveDatabaseLoginInfo(dbAddressLineEdit.text(),
+                                               dbUserLineEdit.text(),
+                                               dbPasswordLineEdit.text(),
+                                               dbNameLineEdit.text())
+
+        def testDbConnection():
+            if not self.connected and not utils.dictHasEmptyValue(self.loginInfoDict):
+                try:
+                    self.cnx = mysql_query.init(self.loginInfoDict['user'],
+                                                self.loginInfoDict['password'],
+                                                self.loginInfoDict['address'],
+                                                self.loginInfoDict['database'])
+                    if self.cnx.is_connected:
+                        self.connected = True
+                        print("Connected to database successfully")
+                        loadDbTables()
+                        dbTestButton.setDisabled(True)
+                        # notebook.tab(0, state='normal')
+                except mysql.connector.errors.ProgrammingError:
+                    print("Access Denied")
+                except mysql.connector.errors.InterfaceError:
+                    print("Invalid Login Information Format")
+            # if not self.connected:
+                # notebook.tab(0, state='disabled')
+
+        def browseBtn():
+            print("BrowseBtn")
+            #directory = filedialog.askdirectory()
+            #if directory:
+                #updateSearchPath(directory)
+                #json_appdata.saveLibrarySearchPath(directory)
+
+        def getLibSearchPath():
+            self.searchPathDict = json_appdata.getLibrarySearchPath()
+            if 'filepath' in self.searchPathDict:
+                updateSearchPath(self.searchPathDict['filepath'])
+
+        def updateSearchPath(path):
+            searchPathLineEdit.setText(path)
+            print(f"Library search path set: {path}")
+            updatePathComboboxes(path)
+
+        def updatePathComboboxes(dirPath):
+            schlibFiles = glob.glob(dirPath + '/**/*.SchLib', recursive=True)
+            pcblibFiles = glob.glob(dirPath + '/**/*.PcbLib', recursive=True)
+            ceLibraryPathCombobox.clear()
+            ceFootprintPathCombobox.clear()
+            for f in schlibFiles:
+                ceLibraryPathCombobox.addItem(f[f.find('Symbols'):].replace('\\', '/', 255))
+            for f in pcblibFiles:
+                ceFootprintPathCombobox.addItem(f[f.find('Footprints'):].replace('\\', '/', 255))
+
+        def updateLibraryRefCombobox():
+            ceLibraryRefCombobox.clear()
+            ceLibraryRefCombobox.addItems(altium_parser.getLibraryRefList(
+                searchPathLineEdit.text() + '/' + ceLibraryPathCombobox.currentText()))
+
+        def updateFootprintRefCombobox():
+            ceFootprintRefCombobox.clear()
+            ceFootprintRefCombobox.addItems(altium_parser.getFootprintRefList(
+                searchPathLineEdit.text() + '/' + ceFootprintPathCombobox.currentText()))
+
+        # set stylesheet
+        file = QFile(":/dark/stylesheet.qss")
+        file.open(QFile.ReadOnly | QFile.Text)
+        stream = QTextStream(file)
+        app.setStyleSheet(stream.readAll())
+
+        # code goes here
+        tabWidget = QTabWidget()
+        tabWidget.setMinimumSize(1920, 1080)
+        tabWidget.setTabPosition(QTabWidget.West)
+
+        homeWidget = QWidget()
+        settingsWidget = QWidget()
+
+        tabWidget.addTab(homeWidget, '')
+        tabWidget.setTabIcon(0, homeIcon)
+        tabWidget.addTab(settingsWidget, '')
+        tabWidget.setTabIcon(1, settingsIcon)
+        tabWidget.setIconSize(QtCore.QSize(64, 64))
+        tabWidget.show()
+
+        # Settings page widgets
+        settingsVLayout = QVBoxLayout()
+        settingsTopHLayout = QHBoxLayout()
+        settingsWidget.setLayout(settingsVLayout)
+        settingsVLayout.addLayout(settingsTopHLayout)
+        settingsVLayout.addStretch(1)
+
+        loginGroupBox = QGroupBox("MySQL Server Login")
+        loginGroupBox.setAlignment(Qt.AlignLeft)
+
+        settingsTopHLayout.addWidget(loginGroupBox, 0)
+        settingsTopHLayout.addStretch(1)
+        loginGridLayout = QGridLayout()
+        loginGroupBox.setLayout(loginGridLayout)
+        loginGridLayout.setColumnMinimumWidth(1, 50)
+        loginGridLayout.setSpacing(20)
+
+        dbAddressLabel = QLabel("Address:")
+        dbAddressLineEdit = QLineEdit()
+        loginGridLayout.addWidget(dbAddressLabel, 0, 0)
+        loginGridLayout.addWidget(dbAddressLineEdit, 0, 2)
+
+        dbUserLabel = QLabel("User:")
+        dbUserLineEdit = QLineEdit()
+        loginGridLayout.addWidget(dbUserLabel, 1, 0)
+        loginGridLayout.addWidget(dbUserLineEdit, 1, 2)
+
+        dbPasswordLabel = QLabel("Password:")
+        dbPasswordLineEdit = QLineEdit()
+        dbPasswordLineEdit.setEchoMode(QLineEdit.PasswordEchoOnEdit)
+        loginGridLayout.addWidget(dbPasswordLabel, 2, 0)
+        loginGridLayout.addWidget(dbPasswordLineEdit, 2, 2)
+
+        dbNameLabel = QLabel("Database:")
+        dbNameLineEdit = QLineEdit()
+        loginGridLayout.addWidget(dbNameLabel, 3, 0)
+        loginGridLayout.addWidget(dbNameLineEdit, 3, 2)
+
+        dbTestButton = QPushButton("Test")
+        loginGridLayout.addWidget(dbTestButton, 4, 0, 1, 2)
+        dbTestButton.released.connect(testDbConnection)
+
+        dbSaveButton = QPushButton("Save")
+        loginGridLayout.addWidget(dbSaveButton, 4, 2)
+        dbSaveButton.released.connect(saveDbLogins)
+
+        settingsTopRightVLayout = QVBoxLayout()
+        searchPathHLayout = QHBoxLayout()
+        settingsTopHLayout.addLayout(settingsTopRightVLayout)
+        settingsTopRightVLayout.addLayout(searchPathHLayout)
+        settingsTopRightVLayout.addStretch(1)
+        searchPathLabel = QLabel("Library Search Path:")
+        searchPathHLayout.addWidget(searchPathLabel)
+        searchPathLineEdit = QLineEdit()
+        searchPathHLayout.addWidget(searchPathLineEdit, 10)
+        searchPathButton = QPushButton("Browse")
+        searchPathButton.released.connect(browseBtn)
+        searchPathHLayout.addWidget(searchPathButton)
+
+        # Home page widgets
+        homeVLayout = QVBoxLayout()
+        homeWidget.setLayout(homeVLayout)
+
+        hometopHLayout = QHBoxLayout()
+        homeVLayout.addLayout(hometopHLayout)
+
+        componentEditorGroupBox = QGroupBox("Component Editor")
+        componentEditorGridLayout = QGridLayout()
+        componentEditorGroupBox.setLayout(componentEditorGridLayout)
+        hometopHLayout.addWidget(componentEditorGroupBox)
+
+        tableGroupBox = QGroupBox("Table View")
+        homeVLayout.addWidget(tableGroupBox)
+
+        tableGroupBoxVLayout = QVBoxLayout()
+        tableGroupBox.setLayout(tableGroupBoxVLayout)
+
+        tableWidget = QTableWidget()
+        tableGroupBoxVLayout.addWidget(tableWidget)
+
+        tableLabel = QLabel("DB Table:")
+        componentEditorGridLayout.addWidget(tableLabel, 0, 0)
+        tableCombobox = QComboBox()
+        tableCombobox.currentTextChanged.connect(loadGUI)
+        componentEditorGridLayout.addWidget(tableCombobox, 0, 1)
+
+        loadDbLogins()
+        testDbConnection()
+
+        ceAddButton = QPushButton("Add new entry")
+        ceAddButton.released.connect(addToDatabaseClicked)
+        ceAddButton.setEnabled(False)
+        ceAddButton.setObjectName("AccentButton")
+        ceAddButton.setStyleSheet("QPushButton#AccentButton { background-color: 51b7eb;}")
+        componentEditorGridLayout.addWidget(ceAddButton, 7, 4, 1, 2)
+
+        ceNameLabel = QLabel("Name:")
+        componentEditorGridLayout.addWidget(ceNameLabel, 1, 0)
+        ceNameLineEdit = QLineEdit()
+        ceNameLineEdit.textChanged.connect(validateName)
+        componentEditorGridLayout.addWidget(ceNameLineEdit, 1, 1)
+
+        ceSupplierLabel = QLabel("Supplier 1:")
+        componentEditorGridLayout.addWidget(ceSupplierLabel, 1, 3)
+        ceSupplierCombobox = QComboBox()
+        ceSupplierCombobox.addItem("Digi-Key")
+        ceSupplierCombobox.setCurrentIndex(0)
+        componentEditorGridLayout.addWidget(ceSupplierCombobox, 1, 4, 1, 2)
+
+        ceSupplierPnLabel = QLabel("Supplier Part Number 1:")
+        componentEditorGridLayout.addWidget(ceSupplierPnLabel, 2, 3)
+        ceSupplierPnLineEdit = QLineEdit()
+        ceSupplierPnLineEdit.returnPressed.connect(query_supplier)
+        componentEditorGridLayout.addWidget(ceSupplierPnLineEdit, 2, 4)
+
+        ceSupplierPnButton = QPushButton()
+        ceSupplierPnButton.setIcon(downloadIcon)
+        ceSupplierPnButton.setIconSize(QSize(48, 30))
+        ceSupplierPnButton.released.connect(query_supplier)
+        componentEditorGridLayout.addWidget(ceSupplierPnButton, 2, 5)
+
+        ceLibraryPathLabel = QLabel("Library Path" + ":")
+        componentEditorGridLayout.addWidget(ceLibraryPathLabel, 3, 3)
+        ceLibraryPathCombobox = QComboBox()
+        ceLibraryPathCombobox.currentTextChanged.connect(updateLibraryRefCombobox)
+        componentEditorGridLayout.addWidget(ceLibraryPathCombobox, 3, 4, 1, 2)
+
+        ceLibraryRefLabel = QLabel("Library Ref" + ":")
+        componentEditorGridLayout.addWidget(ceLibraryRefLabel, 4, 3)
+        ceLibraryRefCombobox = QComboBox()
+        componentEditorGridLayout.addWidget(ceLibraryRefCombobox, 4, 4, 1, 2)
+
+        ceFootprintPathLabel = QLabel("Footprint Path" + ":")
+        componentEditorGridLayout.addWidget(ceFootprintPathLabel, 5, 3)
+        ceFootprintPathCombobox = QComboBox()
+        ceFootprintPathCombobox.currentTextChanged.connect(updateFootprintRefCombobox)
+        componentEditorGridLayout.addWidget(ceFootprintPathCombobox, 5, 4, 1, 2)
+
+        ceFootprintRefLabel = QLabel("Footprint Ref" + ":")
+        componentEditorGridLayout.addWidget(ceFootprintRefLabel, 6, 3)
+        ceFootprintRefCombobox = QComboBox()
+        componentEditorGridLayout.addWidget(ceFootprintRefCombobox, 6, 4, 1, 2)
+
+        getLibSearchPath()
+
+        sys.exit(app.exec())
 
 
 if __name__ == "__main__":
-    main()
+    App()

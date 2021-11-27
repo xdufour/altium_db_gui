@@ -10,3 +10,18 @@ def loadImageTk(filepath, size):
 
 def loadQIcon(filepath):
     return QIcon(filepath)
+
+
+def dictHasEmptyValue(d):
+    for k in d:
+        if d[k] == "":
+            return True
+    return False
+
+
+def strippedList(srcList, unwantedList):
+    dstList = []
+    for it in srcList:
+        if it not in unwantedList:
+            dstList.append(it)
+    return dstList

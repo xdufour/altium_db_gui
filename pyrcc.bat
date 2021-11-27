@@ -1,0 +1,1 @@
+pyrcc5 dist/breeze.qrc -o breeze_resources.py

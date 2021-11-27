@@ -84,24 +84,21 @@ class App:
                     row += 1
 
         def updateTableViewFrame():
-            table = None
             dbDataCursor = mysql_query.getTableData(self.cnx, tableNameCombobox.currentText())
             data = dbDataCursor.fetchall()
 
-            if table is not None:
-                table.deleteLater()
+            tableWidget.clear()
+            tableWidget.setColumnCount(len(self.dbColumnNames))
+            tableWidget.setRowCount(len(data))
+            tableWidget.setHorizontalHeaderLabels(self.dbColumnNames)
 
-            table = QTableWidget(len(data), len(self.dbColumnNames))
-            tableGroupBoxVLayout.addWidget(table)
-
-            table.setHorizontalHeaderLabels(self.dbColumnNames)
             for row, cellData in enumerate(data):
                 for column, cellData in enumerate(cellData):
                     item = QTableWidgetItem(cellData)
-                    table.setItem(row, column, item)
+                    tableWidget.setItem(row, column, item)
 
-            table.setSortingEnabled(True)
-            table.setCornerButtonEnabled(False)
+            tableWidget.setSortingEnabled(True)
+            tableWidget.setCornerButtonEnabled(False)
 
         def query_supplier():
             dkpn = ceSupplierPnLineEdit.text()
@@ -211,7 +208,6 @@ class App:
         stream = QTextStream(file)
         app.setStyleSheet(stream.readAll())
 
-        # code goes here
         tabWidget = QTabWidget()
         tabWidget.setMinimumSize(1920, 1080)
         tabWidget.setTabPosition(QTabWidget.West)
@@ -301,6 +297,9 @@ class App:
 
         tableGroupBoxVLayout = QVBoxLayout()
         tableGroupBox.setLayout(tableGroupBoxVLayout)
+
+        tableWidget = QTableWidget()
+        tableGroupBoxVLayout.addWidget(tableWidget)
 
         tableLabel = QLabel("DB Table:")
         componentEditorGridLayout.addWidget(tableLabel, 0, 0)

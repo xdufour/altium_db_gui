@@ -53,3 +53,5 @@ def insertInDatabase(cnx, table_name, headers, data):
     except MySQLdb.ProgrammingError:
         print("SQL Query Insert Failure")
 
+
+#UPDATE `altium_db_library`.`capacitors` SET `Tolerance` = '±10%' WHERE (`Name` = 'CAP_CER_10UF_1206_16V_X7R');

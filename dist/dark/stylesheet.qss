@@ -1018,6 +1018,7 @@ QCalendarWidget QSpinBox
 QLabel
 {
     border: 0em solid black;
+    color: #adaead;
 }
 
 /* BORDERS */
@@ -1482,11 +1483,16 @@ QListView
     padding: 0.2em;
 }
 
+QTableView
+{
+    alternate-background-color: #161616;
+}
+
 QTableView::item,
 QListView::item,
 QTreeView::item
 {
-    padding: 0.13em;
+    padding: 0.04em;
     color: #eff0f1;
 }
 
@@ -1497,7 +1503,7 @@ QTreeView::item:!selected:hover
     background-color: rgba(61, 173, 232, 0.1);
     outline: 0;
     color: #eff0f1;
-    padding: 0.13em;
+    padding: 0.04em;
 }
 
 QSlider::handle:horizontal,
@@ -1698,6 +1704,11 @@ QTableView
     border-radius: 0em;
 }
 
+QTableView::item
+{
+    padding-left: 1em;
+}
+
 QAbstractItemView::item
 {
     color: #eff0f1;
@@ -1755,6 +1766,7 @@ QHeaderView::section
     padding-top: 0.3em;
     border-radius: 0em;
     text-align: center;
+    font-size: 9pt;
 }
 
 QHeaderView::section::vertical::first,

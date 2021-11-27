@@ -1,8 +1,9 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem,\
     QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget, QFileDialog, QDialog
 from PyQt5 import QtCore, QtGui
-from PyQt5.QtCore import Qt, QFile, QTextStream, QObject, QSize
-from PyQt5.QtGui import QFont
+from PyQt5.QtCore import Qt, QFile, QTextStream, QSize, QRect
+from PyQt5.QtGui import QFont, QFontMetrics
+import numpy as np
 import sys
 import glob
 import breeze_resources
@@ -87,18 +88,31 @@ class App:
             dbDataCursor = mysql_query.getTableData(self.cnx, tableNameCombobox.currentText())
             data = dbDataCursor.fetchall()
 
+            tableWidget.setSortingEnabled(False)
             tableWidget.clear()
             tableWidget.setColumnCount(len(self.dbColumnNames))
             tableWidget.setRowCount(len(data))
             tableWidget.setHorizontalHeaderLabels(self.dbColumnNames)
 
+            fm = QFontMetrics(QFont('Arial', 9))
+            maxColumnWidth = 500
+            widthPadding = 40
+            cellWidths = []
+
             for row, cellData in enumerate(data):
+                rowWidths = []
                 for column, cellData in enumerate(cellData):
-                    item = QTableWidgetItem(cellData)
+                    item = QTableWidgetItem(str(cellData))
                     tableWidget.setItem(row, column, item)
+                    rowWidths.append(fm.boundingRect(str(cellData)).width() + widthPadding)
+                cellWidths.append(rowWidths)
+
+            for i in range(len(self.dbColumnNames)):
+                headerWidth = fm.boundingRect(self.dbColumnNames[i]).width() + widthPadding
+                dataWidth = utils.columnMax(cellWidths, i)
+                tableWidget.setColumnWidth(i, max([min(headerWidth, maxColumnWidth), min(dataWidth, maxColumnWidth)]))
 
             tableWidget.setSortingEnabled(True)
-            tableWidget.setCornerButtonEnabled(False)
 
         def query_supplier():
             dkpn = ceSupplierPnLineEdit.text()
@@ -209,14 +223,16 @@ class App:
         stream = QTextStream(file)
         app.setStyleSheet(stream.readAll())
 
-        mainWindow = QWidget()
-        mainWindow.setProperty('mainWindow', True)
         mainLayout = QVBoxLayout()
         mainLayout.setContentsMargins(0, 0, 0, 0)
+
+        mainWindow = QWidget()
+        mainWindow.setProperty('mainWindow', True)
+        mainWindow.setMinimumSize(1920, 1080)
+        mainWindow.resize(1920, 1440)
         mainWindow.setLayout(mainLayout)
 
         tabWidget = QTabWidget()
-        tabWidget.setMinimumSize(1920, 1080)
         tabWidget.setTabPosition(QTabWidget.West)
         mainLayout.addWidget(tabWidget)
 
@@ -307,6 +323,8 @@ class App:
         tableGroupBox.setLayout(tableGroupBoxVLayout)
 
         tableWidget = QTableWidget()
+        tableWidget.setCornerButtonEnabled(False)
+        tableWidget.setAlternatingRowColors(True)
         tableGroupBoxVLayout.addWidget(tableWidget)
 
         tableLabel = QLabel("DB Table:")

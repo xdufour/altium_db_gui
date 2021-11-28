@@ -431,6 +431,10 @@ QLineEdit[valid=false] {
     border: 0.04em solid #cc0000;
 }
 
+QTableWidget QLineEdit {
+    font-size: 9pt;
+}
+
 QAbstractScrollArea
 {
     border-radius: 0.09em;
@@ -1719,7 +1723,7 @@ QTableView
 
 QTableView::item
 {
-    padding-left: 1em;
+    padding-left: 0em;
 }
 
 QAbstractItemView::item
@@ -1752,12 +1756,6 @@ QAbstractItemView::item:selected:active
 
 QAbstractItemView::item:selected:hover
 {
-    background: qlineargradient(
-        x1: 0.5, y1: 0.5
-        x2: 0.5, y2: 1,
-        stop: 0 #2f88b7,
-        stop: 1 #2f88b7
-    );
     color: #eff0f1;
 }
 

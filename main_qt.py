@@ -12,7 +12,6 @@ import mysql_query
 import mysql
 import altium_parser
 import dk_api
-from font_roboto import Roboto
 
 permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
                    "Library Ref", "Footprint Path", "Footprint Ref"]
@@ -46,8 +45,9 @@ class App:
             print("Font not loaded")
         else:
             families = fontDb.applicationFontFamilies(fontId)
-            print(f"Set application font: {families[0]}")
-            app.setFont(QFont(families[0], 10))
+            self.fontfamily = families[0]
+            print(f"Set application font: {self.fontfamily}")
+            app.setFont(QFont(self.fontfamily, 10))
 
         self.connected = False
         self.loginInfoDict = {}
@@ -104,19 +104,23 @@ class App:
             tableWidget.setRowCount(len(data))
             tableWidget.setHorizontalHeaderLabels(self.dbColumnNames)
 
-            fm = QFontMetrics(QFont('Arial', 9))
+            fm = QFontMetrics(QFont(self.fontfamily, 9))
             maxColumnWidth = 500
             widthPadding = 40
             cellWidths = []
 
+            # Insert data
             for row, cellData in enumerate(data):
                 rowWidths = []
                 for column, cellData in enumerate(cellData):
                     item = QTableWidgetItem(str(cellData))
                     tableWidget.setItem(row, column, item)
+                    tableWidget.setFont(QFont('Roboto', 9))
+                    tableWidget.setWordWrap(False)
                     rowWidths.append(fm.boundingRect(str(cellData)).width() + widthPadding)
                 cellWidths.append(rowWidths)
 
+            # Set column widths based on either header, data or maximum allowed width
             for i in range(len(self.dbColumnNames)):
                 headerWidth = fm.boundingRect(self.dbColumnNames[i]).width() + widthPadding
                 dataWidth = utils.columnMax(cellWidths, i)

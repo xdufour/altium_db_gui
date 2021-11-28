@@ -3,7 +3,6 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox,
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt, QFile, QTextStream, QSize, QRect
 from PyQt5.QtGui import QFont, QFontMetrics
-import numpy as np
 import sys
 import glob
 import breeze_resources

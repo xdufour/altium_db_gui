@@ -107,7 +107,7 @@ QGroupBox
 }
 
 QGroupBox[valid=true] {
-    border: 0.04em solid #1ed760;
+    border: 0.04em solid #16a349;
 }
 
 QGroupBox:focus
@@ -427,8 +427,18 @@ QLineEdit
     color: #eff0f1;
 }
 
-QLineEdit[valid=false] {
+QLineEdit[valid=false],
+QLineEdit[valid=false]:hover,
+QLineEdit[valid=false]:focus
+{
     border: 0.04em solid #cc0000;
+}
+
+QLineEdit[valid=true],
+QLineEdit[valid=true]:hover,
+QLineEdit[valid=true]:focus
+{
+    border: 0.04em solid #16a349;
 }
 
 QTableWidget QLineEdit {
@@ -769,7 +779,18 @@ QPushButton
 
 QPushButton[accent=true]
 {
-    background-color: #51b7eb;
+    background-color: #0083ff;
+    color: #1c1c1c;
+}
+
+QPushButton[accent=true]:hover
+{
+    background-color: #0083ff;
+    color: #1c1c1c;
+}
+
+QPushButton[accent=true]:hover:pressed{
+    background-color: #0068cc;
 }
 
 QComboBox:open,
@@ -865,12 +886,6 @@ QAbstractView:hover:pressed,
 QTreeView:hover:pressed
 {
     background-color: #3daee9;
-}
-
-QLineEdit[valid=false]:hover,
-QLineEdit[valid=false]:focus
-{
-    border: 0.04em solid #cc0000;
 }
 
 QComboBox:hover:pressed:editable
@@ -1733,13 +1748,15 @@ QAbstractItemView::item
 
 QAbstractItemView::item:pressed
 {
-    background: #2a79a3;
+    background: #0083ff;
+    border-color: #3daee9;
     color: #eff0f1;
 }
 
 QAbstractItemView::item:selected:!active
 {
     background: rgba(61, 173, 232, 0.1);
+    border-color: #3daee9;
 }
 
 /* Use background with qlineargradient to avoid ugly border on widget. */
@@ -1748,15 +1765,15 @@ QAbstractItemView::item:selected:active
     background: qlineargradient(
         x1: 0.5, y1: 0.5
         x2: 0.5, y2: 1,
-        stop: 0 #2a79a3,
-        stop: 1 #2a79a3
+        stop: 0 #0083ff,
+        stop: 1 #0083ff
     );
-    color: #eff0f1;
+    color: #1c1c1c;
 }
 
 QAbstractItemView::item:selected:hover
 {
-    color: #eff0f1;
+    color: #1c1c1c;
 }
 
 QHeaderView

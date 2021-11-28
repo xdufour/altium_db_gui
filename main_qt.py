@@ -27,6 +27,13 @@ def getDbTableList(mysql_cnx):
     return dbTableList
 
 
+def setLineEditValidationState(lineEdit, state):
+    lineEdit.setProperty('valid', state)
+    lineEdit.style().unpolish(lineEdit)
+    lineEdit.style().unpolish(lineEdit)
+    lineEdit.repaint()
+
+
 class App:
     def __init__(self):
         app = QApplication(sys.argv)
@@ -128,10 +135,15 @@ class App:
 
             tableWidget.setSortingEnabled(True)
 
-        def query_supplier():
+        def querySupplier():
             dkpn = ceSupplierPnLineEdit.text()
             print(f"Querying Digi-Key for {dkpn}")
             result = dk_api.fetchDigikeyData(dkpn, tableNameCombobox.currentText(), utils.strippedList(self.dbColumnNames, permanentParams))
+            print(result)
+            if len(result) == 0:
+                setLineEditValidationState(ceSupplierPnLineEdit, False)
+            else:
+                setLineEditValidationState(ceSupplierPnLineEdit, True)
             for columnName, value in result:
                 try:
                     fields[columnName.lower()].setText(value)
@@ -191,9 +203,6 @@ class App:
                         loadDbTables()
                         dbTestButton.setDisabled(True)
                         dbTestButton.setText("Connected")
-                        loginGroupBox.setProperty('valid', True)
-                        loginGroupBox.style().unpolish(loginGroupBox)
-                        loginGroupBox.style().polish(loginGroupBox)
                         tabWidget.setTabEnabled(0, True)
                 except mysql.connector.errors.ProgrammingError:
                     print("Access Denied")
@@ -369,7 +378,7 @@ class App:
         ceAddButton = QPushButton("Add new entry")
         ceAddButton.released.connect(addToDatabaseClicked)
         ceAddButton.setEnabled(False)
-        ceAddButton.setObjectName("AccentButton")
+        ceAddButton.setProperty("accent", True)
         ceAddButton.setStyleSheet("QPushButton#AccentButton { background-color: 51b7eb;}")
         componentEditorGridLayout.addWidget(ceAddButton, 7, lineEdit2Column, 1, lineEditColSpan)
 
@@ -391,14 +400,15 @@ class App:
         ceSupplierPnLabel = QLabel("Supplier Part Number 1:")
         componentEditorGridLayout.addWidget(ceSupplierPnLabel, 2, label2Column)
         ceSupplierPnLineEdit = QLineEdit()
-        ceSupplierPnLineEdit.returnPressed.connect(query_supplier)
+        ceSupplierPnLineEdit.returnPressed.connect(querySupplier)
+        ceSupplierPnLineEdit.textChanged.connect(lambda: setLineEditValidationState(ceSupplierPnLineEdit, None))
         fields['supplier part number 1'] = ceSupplierPnLineEdit
         componentEditorGridLayout.addWidget(ceSupplierPnLineEdit, 2, lineEdit2Column)
 
         ceSupplierPnButton = QPushButton()
         ceSupplierPnButton.setIcon(downloadIcon)
         ceSupplierPnButton.setIconSize(QSize(48, 30))
-        ceSupplierPnButton.released.connect(query_supplier)
+        ceSupplierPnButton.released.connect(querySupplier)
         componentEditorGridLayout.addWidget(ceSupplierPnButton, 2, lineEdit2Column + 1)
 
         ceLibraryPathLabel = QLabel("Library Path" + ":")

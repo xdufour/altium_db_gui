@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox,
     QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget, QFileDialog, QDialog
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QFile, QTextStream, QSize
-from PyQt5.QtGui import QFont, QFontMetrics
+from PyQt5.QtGui import QFont, QFontMetrics, QFontDatabase
 import sys
 import glob
 import breeze_resources
@@ -12,6 +12,7 @@ import mysql_query
 import mysql
 import altium_parser
 import dk_api
+from font_roboto import Roboto
 
 permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
                    "Library Ref", "Footprint Path", "Footprint Ref"]
@@ -39,7 +40,14 @@ class App:
         app.setApplicationDisplayName("Altium DB GUI")
         app.setWindowIcon(appIcon)
 
-        app.setFont(QFont('Arial', 10))
+        fontDb = QFontDatabase
+        fontId = fontDb.addApplicationFont('assets/font/Roboto-Regular.ttf')
+        if fontId < 0:
+            print("Font not loaded")
+        else:
+            families = fontDb.applicationFontFamilies(fontId)
+            print(f"Set application font: {families[0]}")
+            app.setFont(QFont(families[0], 10))
 
         self.connected = False
         self.loginInfoDict = {}

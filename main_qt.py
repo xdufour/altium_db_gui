@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem,\
     QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget, QFileDialog, QDialog
-from PyQt5 import QtCore, QtGui
-from PyQt5.QtCore import Qt, QFile, QTextStream, QSize, QRect
+from PyQt5 import QtCore
+from PyQt5.QtCore import Qt, QFile, QTextStream, QSize
 from PyQt5.QtGui import QFont, QFontMetrics
 import sys
 import glob
@@ -17,7 +17,7 @@ permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path
                    "Library Ref", "Footprint Path", "Footprint Ref"]
 
 labels = {}
-lineEdits = {}
+fields = {}
 
 def getDbTableList(mysql_cnx):
     dbTableList = []
@@ -63,24 +63,27 @@ class App:
         def updateCreateComponentFrame():
             row = 2
             dbColumnListCursor = mysql_query.getTableColumns(self.cnx, tableNameCombobox.currentText())
-            # Delete any previously created widgets
-            for k in labels:
-                labels[k].deleteLater()
-            labels.clear()
-            for k in lineEdits:
-                lineEdits[k].deleteLater()
-            lineEdits.clear()
+
             self.dbColumnNames.clear()
             # Create widgets
             for i, column in enumerate(dbColumnListCursor):
                 self.dbColumnNames.append(column[0])
                 if self.dbColumnNames[i] not in permanentParams:
+                    # Delete any previously created widgets
+                    nameLower = self.dbColumnNames[i].lower()
+                    if nameLower in labels:
+                        labels[nameLower].deleteLater()
+                        del labels[nameLower]
+                    if nameLower in fields:
+                        fields[nameLower].deleteLater()
+                        del fields[nameLower]
+                        
                     label = QLabel(self.dbColumnNames[i] + ":")
-                    labels[self.dbColumnNames[i].lower()] = label
+                    labels[nameLower] = label
                     lineEdit = QLineEdit()
-                    lineEdits[self.dbColumnNames[i].lower()] = lineEdit
-                    componentEditorGridLayout.addWidget(label, row, 0)
-                    componentEditorGridLayout.addWidget(lineEdit, row, 1)
+                    fields[nameLower] = lineEdit
+                    componentEditorGridLayout.addWidget(label, row, label1Column)
+                    componentEditorGridLayout.addWidget(lineEdit, row, lineEdit1Column, 1, lineEditColSpan)
                     row += 1
 
         def updateTableViewFrame():
@@ -119,8 +122,8 @@ class App:
             result = dk_api.fetchDigikeyData(dkpn, tableNameCombobox.currentText(), utils.strippedList(self.dbColumnNames, permanentParams))
             for columnName, value in result:
                 try:
-                    lineEdits[columnName.lower()].setText(value)
-                    lineEdits[columnName.lower()].setCursorPosition(0)
+                    fields[columnName.lower()].setText(value)
+                    fields[columnName.lower()].setCursorPosition(0)
                 except KeyError:
                     print(f"Error: no field found for \'{columnName.lower()}\'")
 
@@ -128,11 +131,12 @@ class App:
             rowData = []
             for col in self.dbColumnNames:
                 try:
-                    rowData.append(QLineEdit(lineEdits[col.lower()]).text())
+                    rowData.append(utils.getFieldText(fields[col.lower()]))
                 except KeyError:
                     print(f"Error: No field found for \'{col.lower()}\'")
                     return
             mysql_query.insertInDatabase(self.cnx, tableNameCombobox.currentText(), self.dbColumnNames, rowData)
+            updateTableViewFrame()
 
         def validateName(name):
             tableWidgetItems = tableWidget.findItems(name, Qt.MatchExactly)
@@ -311,6 +315,13 @@ class App:
         searchPathHLayout.addWidget(searchPathButton)
 
         # Home page widgets
+        label1Column = 0
+        lineEdit1Column = 1
+        spacingColumn = 3
+        label2Column = 4
+        lineEdit2Column = 5
+        lineEditColSpan = 2
+
         homeVLayout = QVBoxLayout()
         homeWidget.setLayout(homeVLayout)
 
@@ -335,10 +346,10 @@ class App:
         tableGroupBoxVLayout.addWidget(tableWidget)
 
         tableLabel = QLabel("DB Table:")
-        componentEditorGridLayout.addWidget(tableLabel, 0, 0)
+        componentEditorGridLayout.addWidget(tableLabel, 0, label1Column)
         tableNameCombobox = QComboBox()
         tableNameCombobox.currentTextChanged.connect(loadGUI)
-        componentEditorGridLayout.addWidget(tableNameCombobox, 0, 1)
+        componentEditorGridLayout.addWidget(tableNameCombobox, 0, lineEdit1Column, 1, lineEditColSpan)
 
         loadDbLogins()
         testDbConnection()
@@ -348,56 +359,68 @@ class App:
         ceAddButton.setEnabled(False)
         ceAddButton.setObjectName("AccentButton")
         ceAddButton.setStyleSheet("QPushButton#AccentButton { background-color: 51b7eb;}")
-        componentEditorGridLayout.addWidget(ceAddButton, 7, 4, 1, 2)
+        componentEditorGridLayout.addWidget(ceAddButton, 7, lineEdit2Column, 1, lineEditColSpan)
 
         ceNameLabel = QLabel("Name:")
-        componentEditorGridLayout.addWidget(ceNameLabel, 1, 0)
+        componentEditorGridLayout.addWidget(ceNameLabel, 1, label1Column)
         ceNameLineEdit = QLineEdit()
         ceNameLineEdit.textChanged.connect(validateName)
-        componentEditorGridLayout.addWidget(ceNameLineEdit, 1, 1)
+        fields['name'] = ceNameLineEdit
+        componentEditorGridLayout.addWidget(ceNameLineEdit, 1, lineEdit1Column, 1, lineEditColSpan)
 
         ceSupplierLabel = QLabel("Supplier 1:")
-        componentEditorGridLayout.addWidget(ceSupplierLabel, 1, 3)
+        componentEditorGridLayout.addWidget(ceSupplierLabel, 1, label2Column)
         ceSupplierCombobox = QComboBox()
         ceSupplierCombobox.addItem("Digi-Key")
         ceSupplierCombobox.setCurrentIndex(0)
-        componentEditorGridLayout.addWidget(ceSupplierCombobox, 1, 4, 1, 2)
+        fields['supplier 1'] = ceSupplierCombobox
+        componentEditorGridLayout.addWidget(ceSupplierCombobox, 1, lineEdit2Column, 1, lineEditColSpan)
 
         ceSupplierPnLabel = QLabel("Supplier Part Number 1:")
-        componentEditorGridLayout.addWidget(ceSupplierPnLabel, 2, 3)
+        componentEditorGridLayout.addWidget(ceSupplierPnLabel, 2, label2Column)
         ceSupplierPnLineEdit = QLineEdit()
         ceSupplierPnLineEdit.returnPressed.connect(query_supplier)
-        componentEditorGridLayout.addWidget(ceSupplierPnLineEdit, 2, 4)
+        fields['supplier part number 1'] = ceSupplierPnLineEdit
+        componentEditorGridLayout.addWidget(ceSupplierPnLineEdit, 2, lineEdit2Column)
 
         ceSupplierPnButton = QPushButton()
         ceSupplierPnButton.setIcon(downloadIcon)
         ceSupplierPnButton.setIconSize(QSize(48, 30))
         ceSupplierPnButton.released.connect(query_supplier)
-        componentEditorGridLayout.addWidget(ceSupplierPnButton, 2, 5)
+        componentEditorGridLayout.addWidget(ceSupplierPnButton, 2, lineEdit2Column + 1)
 
         ceLibraryPathLabel = QLabel("Library Path" + ":")
-        componentEditorGridLayout.addWidget(ceLibraryPathLabel, 3, 3)
+        componentEditorGridLayout.addWidget(ceLibraryPathLabel, 3, label2Column)
         ceLibraryPathCombobox = QComboBox()
         ceLibraryPathCombobox.currentTextChanged.connect(updateLibraryRefCombobox)
-        componentEditorGridLayout.addWidget(ceLibraryPathCombobox, 3, 4, 1, 2)
+        fields['library path'] = ceLibraryPathCombobox
+        componentEditorGridLayout.addWidget(ceLibraryPathCombobox, 3, lineEdit2Column, 1, lineEditColSpan)
 
         ceLibraryRefLabel = QLabel("Library Ref" + ":")
-        componentEditorGridLayout.addWidget(ceLibraryRefLabel, 4, 3)
+        componentEditorGridLayout.addWidget(ceLibraryRefLabel, 4, label2Column)
         ceLibraryRefCombobox = QComboBox()
-        componentEditorGridLayout.addWidget(ceLibraryRefCombobox, 4, 4, 1, 2)
+        fields['library ref'] = ceLibraryRefCombobox
+        componentEditorGridLayout.addWidget(ceLibraryRefCombobox, 4, lineEdit2Column, 1, lineEditColSpan)
 
         ceFootprintPathLabel = QLabel("Footprint Path" + ":")
-        componentEditorGridLayout.addWidget(ceFootprintPathLabel, 5, 3)
+        componentEditorGridLayout.addWidget(ceFootprintPathLabel, 5, label2Column)
         ceFootprintPathCombobox = QComboBox()
         ceFootprintPathCombobox.currentTextChanged.connect(updateFootprintRefCombobox)
-        componentEditorGridLayout.addWidget(ceFootprintPathCombobox, 5, 4, 1, 2)
+        fields['footprint path'] = ceFootprintPathCombobox
+        componentEditorGridLayout.addWidget(ceFootprintPathCombobox, 5, lineEdit2Column, 1, lineEditColSpan)
 
         ceFootprintRefLabel = QLabel("Footprint Ref" + ":")
-        componentEditorGridLayout.addWidget(ceFootprintRefLabel, 6, 3)
+        componentEditorGridLayout.addWidget(ceFootprintRefLabel, 6, label2Column)
         ceFootprintRefCombobox = QComboBox()
-        componentEditorGridLayout.addWidget(ceFootprintRefCombobox, 6, 4, 1, 2)
+        fields['footprint ref'] = ceFootprintRefCombobox
+        componentEditorGridLayout.addWidget(ceFootprintRefCombobox, 6, lineEdit2Column, 1, lineEditColSpan)
 
         componentEditorGridLayout.setSpacing(20)
+        componentEditorGridLayout.setColumnMinimumWidth(spacingColumn, 50)
+        componentEditorGridLayout.setColumnStretch(lineEdit1Column, 1)
+        componentEditorGridLayout.setColumnStretch(lineEdit2Column, 1)
+        componentEditorGridLayout.setColumnMinimumWidth(lineEdit2Column + 1, 80)
+        componentEditorGridLayout.setColumnMinimumWidth(lineEdit1Column + 1, 80)
 
         getLibSearchPath()
 

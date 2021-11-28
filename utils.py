@@ -25,3 +25,10 @@ def columnMax(array2d, index):
     for row in array2d:
         maxVal = max(maxVal, row[index])
     return maxVal
+
+
+def getFieldText(widget):
+    if widget.metaObject().className() == "QLineEdit":
+        return widget.text()
+    elif widget.metaObject().className() == "QComboBox":
+        return widget.currentText()

@@ -427,6 +427,10 @@ QLineEdit
     color: #eff0f1;
 }
 
+QLineEdit[valid=false] {
+    border: 0.04em solid #cc0000;
+}
+
 QAbstractScrollArea
 {
     border-radius: 0.09em;
@@ -854,6 +858,12 @@ QAbstractView:hover:pressed,
 QTreeView:hover:pressed
 {
     background-color: #31363b;
+}
+
+QLineEdit[valid=false]:hover,
+QLineEdit[valid=false]:focus
+{
+    border: 0.04em solid #cc0000;
 }
 
 QComboBox:hover:pressed:editable

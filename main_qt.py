@@ -136,7 +136,15 @@ class App:
             mysql_query.insertInDatabase(self.cnx, tableNameCombobox.currentText(), self.dbColumnNames, rowData)
 
         def validateName(name):
-            ceAddButton.setEnabled(len(name) > 0)
+            tableWidgetItems = tableWidget.findItems(name, Qt.MatchExactly)
+            nameExists = False
+            for item in tableWidgetItems:
+                if item.column() == 0:
+                    nameExists = True
+            ceNameLineEdit.setProperty('valid', not nameExists)
+            ceNameLineEdit.style().unpolish(ceNameLineEdit)
+            ceNameLineEdit.style().polish(ceNameLineEdit)
+            ceAddButton.setDisabled(len(name) == 0 or nameExists)
 
         def loadDbTables():
             self.dbTableList = getDbTableList(self.cnx)

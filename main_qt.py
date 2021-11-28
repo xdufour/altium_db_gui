@@ -39,7 +39,7 @@ class App:
         app.setApplicationDisplayName("Altium DB GUI")
         app.setWindowIcon(appIcon)
 
-        app.setFont(QFont('Arial', 11))
+        app.setFont(QFont('Arial', 10))
 
         self.connected = False
         self.loginInfoDict = {}
@@ -77,7 +77,7 @@ class App:
                     if nameLower in fields:
                         fields[nameLower].deleteLater()
                         del fields[nameLower]
-                        
+
                     label = QLabel(self.dbColumnNames[i] + ":")
                     labels[nameLower] = label
                     lineEdit = QLineEdit()

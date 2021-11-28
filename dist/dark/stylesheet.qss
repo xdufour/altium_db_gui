@@ -831,11 +831,9 @@ QPushButton:hover
 }
 
 QComboBox:hover,
-QComboBox:focus,
 QAbstractSpinBox:hover,
 QAbstractSpinBox:focus,
 QLineEdit:hover,
-QLineEdit:focus,
 QTextEdit:hover,
 QTextEdit:focus,
 QPlainTextEdit:hover,
@@ -848,7 +846,12 @@ QTreeView:focus
     color: #eff0f1;
 }
 
-QComboBox:hover:pressed:!editable,
+QComboBox:focus,
+QComboBox:!editable:on,
+QLineEdit:focus {
+    border: 0.04em solid #0083ff;
+}
+
 QPushButton:hover:pressed,
 QAbstractSpinBox:hover:pressed,
 QLineEdit:hover:pressed,
@@ -857,7 +860,7 @@ QPlainTextEdit:hover:pressed,
 QAbstractView:hover:pressed,
 QTreeView:hover:pressed
 {
-    background-color: #31363b;
+    background-color: #3daee9;
 }
 
 QLineEdit[valid=false]:hover,

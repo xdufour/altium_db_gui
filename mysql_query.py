@@ -54,4 +54,16 @@ def insertInDatabase(cnx, table_name, headers, data):
         print("SQL Query Insert Failure")
 
 
+class MySqlEditQueryData:
+    def __init__(self, columnName, value, primaryKey, pkValue):
+        self.columnName = columnName
+        self.value = value
+        self.primaryKey = primaryKey
+        self.pkValue = pkValue
+        print(f"Pending update query created: {columnName} = {value} for primaryKey {primaryKey} = {pkValue}")
+
+
+def editDatabase(cnx, table, tableName, editList):
+    print("EditDB")
+
 #UPDATE `altium_db_library`.`capacitors` SET `Tolerance` = '±10%' WHERE (`Name` = 'CAP_CER_10UF_1206_16V_X7R');

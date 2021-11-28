@@ -9,6 +9,7 @@ import breeze_resources
 import utils
 import json_appdata
 import mysql_query
+from mysql_query import MySqlEditQueryData
 import mysql
 import altium_parser
 import dk_api
@@ -18,6 +19,8 @@ permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path
 
 labels = {}
 fields = {}
+pendingEditList = []
+
 
 def getDbTableList(mysql_cnx):
     dbTableList = []
@@ -39,9 +42,12 @@ class App:
         app = QApplication(sys.argv)
 
         appIcon = utils.loadQIcon('assets/app.ico')
-        homeIcon = utils.loadQIcon('assets/home_rotated.png')
-        settingsIcon = utils.loadQIcon('assets/settings_rotated.png')
+        homeIcon = utils.loadQIcon('assets/home.png')
+        settingsIcon = utils.loadQIcon('assets/settings.png')
         downloadIcon = utils.loadQIcon('assets/download_cloud.png')
+        applyIcon = utils.loadQIcon('assets/submit.png')
+        editIcon = utils.loadQIcon('assets/copy.png')
+        deleteIcon = utils.loadQIcon('assets/delete.png')
 
         app.setApplicationDisplayName("Altium DB GUI")
         app.setWindowIcon(appIcon)
@@ -117,15 +123,15 @@ class App:
             cellWidths = []
 
             # Insert data
+            tableWidget.blockSignals(True)
             for row, cellData in enumerate(data):
                 rowWidths = []
                 for column, cellData in enumerate(cellData):
                     item = QTableWidgetItem(str(cellData))
                     tableWidget.setItem(row, column, item)
-                    tableWidget.setFont(QFont('Roboto', 9))
-                    tableWidget.setWordWrap(False)
                     rowWidths.append(fm.boundingRect(str(cellData)).width() + widthPadding)
                 cellWidths.append(rowWidths)
+            tableWidget.blockSignals(False)
 
             # Set column widths based on either header, data or maximum allowed width
             for i in range(len(self.dbColumnNames)):
@@ -249,6 +255,26 @@ class App:
             ceFootprintRefCombobox.addItems(altium_parser.getFootprintRefList(
                 searchPathLineEdit.text() + '/' + ceFootprintPathCombobox.currentText()))
 
+        def recordDbEdit(row, column):
+            primaryKey = 'Name'  # TODO: make adaptable
+            editedValue = tableWidget.item(row, column).text()
+            valueHeader = tableWidget.horizontalHeaderItem(column).text()
+            pk = None
+            for i in range(tableWidget.columnCount()):
+                headerText = tableWidget.horizontalHeaderItem(i).text()
+                if headerText == primaryKey:
+                    pk = headerText
+                    pkValue = tableWidget.item(row, i).text()
+            if pk is not None:
+                queryData = MySqlEditQueryData(valueHeader, editedValue, pk, pkValue)
+                pendingEditList.append(queryData)
+                applyChangesButton.setEnabled(True)
+            else:
+                print("Error while finding edit's corresponding primary key")
+
+        def applyDbEdits():
+            print("Apply")
+
         # set stylesheet
         file = QFile(":/dark/stylesheet.qss")
         file.open(QFile.ReadOnly | QFile.Text)
@@ -361,9 +387,38 @@ class App:
         tableGroupBoxVLayout = QVBoxLayout()
         tableGroupBox.setLayout(tableGroupBoxVLayout)
 
+        actionsHLayout = QHBoxLayout()
+        tableGroupBoxVLayout.addLayout(actionsHLayout)
+        actionsHLayout.addStretch(1)
+
+        applyChangesButton = QPushButton()
+        applyChangesButton.setIcon(applyIcon)
+        applyChangesButton.setIconSize(QSize(40, 40))
+        applyChangesButton.setDisabled(True)
+        applyChangesButton.released.connect(applyDbEdits)
+        applyChangesButton.setToolTip("Apply changes")
+        actionsHLayout.addWidget(applyChangesButton)
+
+        duplicateButton = QPushButton()
+        duplicateButton.setIcon(editIcon)
+        duplicateButton.setIconSize(QSize(40, 40))
+        duplicateButton.setDisabled(True)
+        duplicateButton.setToolTip("Duplicate selected row")
+        actionsHLayout.addWidget(duplicateButton)
+
+        deleteButton = QPushButton()
+        deleteButton.setIcon(deleteIcon)
+        deleteButton.setIconSize(QSize(40, 40))
+        deleteButton.setDisabled(True)
+        deleteButton.setToolTip("Delete selected row")
+        actionsHLayout.addWidget(deleteButton)
+
         tableWidget = QTableWidget()
         tableWidget.setCornerButtonEnabled(False)
         tableWidget.setAlternatingRowColors(True)
+        tableWidget.setFont(QFont('Roboto', 9))
+        tableWidget.setWordWrap(False)
+        tableWidget.cellChanged.connect(recordDbEdit)
         tableGroupBoxVLayout.addWidget(tableWidget)
 
         tableLabel = QLabel("DB Table:")
@@ -408,6 +463,7 @@ class App:
         ceSupplierPnButton = QPushButton()
         ceSupplierPnButton.setIcon(downloadIcon)
         ceSupplierPnButton.setIconSize(QSize(48, 30))
+        ceSupplierPnButton.setToolTip("Query supplier for part number")
         ceSupplierPnButton.released.connect(querySupplier)
         componentEditorGridLayout.addWidget(ceSupplierPnButton, 2, lineEdit2Column + 1)
 
@@ -447,6 +503,9 @@ class App:
         getLibSearchPath()
 
         mainWindow.show()
+        applyChangesButton.setMinimumWidth(ceSupplierPnButton.width())
+        duplicateButton.setMinimumWidth(ceSupplierPnButton.width())
+        deleteButton.setMinimumWidth(ceSupplierPnButton.width())
         sys.exit(app.exec())
 
 

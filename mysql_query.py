@@ -11,27 +11,33 @@ def init(user, password, address, database):
 
 
 def getDatabaseTables(cnx):
-    cursor = cnx.cursor(buffered=True)
+    dbTableList = []
+    cursor = cnx.cursor()
     query = "SHOW TABLES FROM `altium_db_library`"
     print("SQL Query: " + query)
     cursor.execute(query)
-    return cursor
+    for table in cursor:
+        dbTableList.append(table[0])
+    return dbTableList
 
 
 def getTableColumns(cnx, table):
-    cursor = cnx.cursor(buffered=True)
+    dbTableColumnList = []
+    cursor = cnx.cursor()
     query = "SHOW COLUMNS FROM `altium_db_library`.`" + table + "`"
     print("SQL Query: " + query)
     cursor.execute(query)
-    return cursor
+    for column in cursor:
+        dbTableColumnList.append(column[0])
+    return dbTableColumnList
 
 
 def getTableData(cnx, table):
-    cursor = cnx.cursor(buffered=True)
+    cursor = cnx.cursor()
     query = "SELECT * FROM `altium_db_library`.`" + table + "`"
     print("SQL Query: " + query)
     cursor.execute(query)
-    return cursor
+    return cursor.fetchall()
 
 
 def insertInDatabase(cnx, table_name, headers, data):

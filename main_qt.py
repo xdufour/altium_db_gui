@@ -22,14 +22,6 @@ fields = {}
 pendingEditList = []
 
 
-def getDbTableList(mysql_cnx):
-    dbTableList = []
-    dbTableCursor = mysql_query.getDatabaseTables(mysql_cnx)
-    for it in dbTableCursor:
-        dbTableList.append(it[0])
-    return dbTableList
-
-
 def setLineEditValidationState(lineEdit, state):
     lineEdit.setProperty('valid', state)
     lineEdit.style().unpolish(lineEdit)
@@ -83,15 +75,13 @@ class App:
 
         def updateCreateComponentFrame():
             row = 2
-            dbColumnListCursor = mysql_query.getTableColumns(self.cnx, tableNameCombobox.currentText())
-
             self.dbColumnNames.clear()
+            self.dbColumnNames = mysql_query.getTableColumns(self.cnx, tableNameCombobox.currentText())
             # Create widgets
-            for i, column in enumerate(dbColumnListCursor):
-                self.dbColumnNames.append(column[0])
-                if self.dbColumnNames[i] not in permanentParams:
+            for column in self.dbColumnNames:
+                if column not in permanentParams:
                     # Delete any previously created widgets
-                    nameLower = self.dbColumnNames[i].lower()
+                    nameLower = column.lower()
                     if nameLower in labels:
                         labels[nameLower].deleteLater()
                         del labels[nameLower]
@@ -99,7 +89,7 @@ class App:
                         fields[nameLower].deleteLater()
                         del fields[nameLower]
 
-                    label = QLabel(self.dbColumnNames[i] + ":")
+                    label = QLabel(column + ":")
                     labels[nameLower] = label
                     lineEdit = QLineEdit()
                     fields[nameLower] = lineEdit
@@ -108,8 +98,7 @@ class App:
                     row += 1
 
         def updateTableViewFrame():
-            dbDataCursor = mysql_query.getTableData(self.cnx, tableNameCombobox.currentText())
-            data = dbDataCursor.fetchall()
+            data = mysql_query.getTableData(self.cnx, tableNameCombobox.currentText())
 
             tableWidget.setSortingEnabled(False)
             tableWidget.clear()
@@ -180,7 +169,7 @@ class App:
             ceAddButton.setDisabled(len(name) == 0 or nameExists)
 
         def loadDbTables():
-            self.dbTableList = getDbTableList(self.cnx)
+            self.dbTableList = mysql_query.getDatabaseTables(self.cnx)
             tableNameCombobox.addItems(self.dbTableList)
 
         def loadDbLogins():

@@ -40,9 +40,9 @@ def getTableData(cnx, table):
     return cursor.fetchall()
 
 
-def insertInDatabase(cnx, table_name, headers, data):
+def insertInDatabase(cnx, table, headers, data):
     cursor = cnx.cursor()
-    query = "INSERT INTO `altium_db_library`.`" + table_name + "` ("
+    query = "INSERT INTO `altium_db_library`.`" + table + "` ("
     for h in headers:
         query += "`" + h + "`, "
     query = query[:len(query) - 2]
@@ -69,7 +69,15 @@ class MySqlEditQueryData:
         print(f"Pending update query created: {columnName} = {value} for primaryKey {primaryKey} = {pkValue}")
 
 
-def editDatabase(cnx, table, tableName, editList):
-    print("EditDB")
-
-#UPDATE `altium_db_library`.`capacitors` SET `Tolerance` = '±10%' WHERE (`Name` = 'CAP_CER_10UF_1206_16V_X7R');
+def editDatabase(cnx, db, table, editList):
+    cursor = cnx.cursor()
+    for edit in editList:
+        query = "UPDATE `" + db + "`.`" + table + "` SET `" + edit.columnName + "` = '" + edit.value + "' WHERE (`"\
+                + edit.primaryKey + "` = '" + edit.pkValue + "')"
+        print("SQL Query: " + query)
+        try:
+            cursor.execute(query)
+            cnx.commit()
+            print(cursor.rowcount, " row(s) affected")
+        except MySQLdb.ProgrammingError:
+            print("SQL Query Update Failure")

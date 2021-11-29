@@ -56,6 +56,8 @@ class App:
 
         self.connected = False
         self.loginInfoDict = {}
+        self.dbColumnNames = []
+        self.cachedTableData = [[]]
 
         self.loginInfoDict = {
             "address": "",
@@ -63,10 +65,6 @@ class App:
             "password": "",
             "database": ""
         }
-
-        self.connected = False
-        self.dbTableList = []
-        self.dbColumnNames = []
 
         def loadGUI(componentName):
             updateCreateComponentFrame()
@@ -98,12 +96,12 @@ class App:
                     row += 1
 
         def updateTableViewFrame():
-            data = mysql_query.getTableData(self.cnx, tableNameCombobox.currentText())
+            self.cachedTableData = mysql_query.getTableData(self.cnx, tableNameCombobox.currentText())
 
             tableWidget.setSortingEnabled(False)
             tableWidget.clear()
             tableWidget.setColumnCount(len(self.dbColumnNames))
-            tableWidget.setRowCount(len(data))
+            tableWidget.setRowCount(len(self.cachedTableData))
             tableWidget.setHorizontalHeaderLabels(self.dbColumnNames)
 
             fm = QFontMetrics(QFont(self.fontfamily, 9))
@@ -113,9 +111,9 @@ class App:
 
             # Insert data
             tableWidget.blockSignals(True)
-            for row, cellData in enumerate(data):
+            for row, rowData in enumerate(self.cachedTableData):
                 rowWidths = []
-                for column, cellData in enumerate(cellData):
+                for column, cellData in enumerate(rowData):
                     item = QTableWidgetItem(str(cellData))
                     tableWidget.setItem(row, column, item)
                     rowWidths.append(fm.boundingRect(str(cellData)).width() + widthPadding)
@@ -253,7 +251,7 @@ class App:
                 headerText = tableWidget.horizontalHeaderItem(i).text()
                 if headerText == primaryKey:
                     pk = headerText
-                    pkValue = tableWidget.item(row, i).text()
+                    pkValue = str(self.cachedTableData[row][i])
             if pk is not None:
                 queryData = MySqlEditQueryData(valueHeader, editedValue, pk, pkValue)
                 pendingEditList.append(queryData)
@@ -262,7 +260,10 @@ class App:
                 print("Error while finding edit's corresponding primary key")
 
         def applyDbEdits():
-            print("Apply")
+            mysql_query.editDatabase(self.cnx, self.loginInfoDict['database'],
+                                     tableNameCombobox.currentText(), pendingEditList)
+            applyChangesButton.setEnabled(False)
+            updateTableViewFrame()
 
         # set stylesheet
         file = QFile(":/dark/stylesheet.qss")

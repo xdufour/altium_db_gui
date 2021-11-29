@@ -244,18 +244,23 @@ class App:
 
         def recordDbEdit(row, column):
             primaryKey = 'Name'  # TODO: make adaptable
+            columnName = tableWidget.horizontalHeaderItem(column).text()
             editedValue = tableWidget.item(row, column).text()
-            valueHeader = tableWidget.horizontalHeaderItem(column).text()
             pk = None
+            pkValue = None
             for i in range(tableWidget.columnCount()):
                 headerText = tableWidget.horizontalHeaderItem(i).text()
                 if headerText == primaryKey:
                     pk = headerText
                     pkValue = str(self.cachedTableData[row][i])
             if pk is not None:
-                queryData = MySqlEditQueryData(valueHeader, editedValue, pk, pkValue)
-                pendingEditList.append(queryData)
                 applyChangesButton.setEnabled(True)
+                for edit in pendingEditList:
+                    if pkValue == edit.pkValue:
+                        edit.append(columnName, editedValue)
+                        return
+                queryData = MySqlEditQueryData(columnName, editedValue, pk, pkValue)
+                pendingEditList.append(queryData)
             else:
                 print("Error while finding edit's corresponding primary key")
 
@@ -263,6 +268,7 @@ class App:
             mysql_query.editDatabase(self.cnx, self.loginInfoDict['database'],
                                      tableNameCombobox.currentText(), pendingEditList)
             applyChangesButton.setEnabled(False)
+            pendingEditList.clear()
             updateTableViewFrame()
 
         # set stylesheet

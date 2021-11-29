@@ -62,18 +62,28 @@ def insertInDatabase(cnx, table, headers, data):
 
 class MySqlEditQueryData:
     def __init__(self, columnName, value, primaryKey, pkValue):
-        self.columnName = columnName
-        self.value = value
+        self.columnNames = []
+        self.values = []
+        self.columnNames.append(columnName)
+        self.values.append(value)
         self.primaryKey = primaryKey
         self.pkValue = pkValue
         print(f"Pending update query created: {columnName} = {value} for primaryKey {primaryKey} = {pkValue}")
+
+    def append(self, columnName, value):
+        self.columnNames.append(columnName)
+        self.values.append(value)
+        print(f"Pending update created amended: {columnName} = {value} for primaryKey {self.primaryKey} = {self.pkValue}")
 
 
 def editDatabase(cnx, db, table, editList):
     cursor = cnx.cursor()
     for edit in editList:
-        query = "UPDATE `" + db + "`.`" + table + "` SET `" + edit.columnName + "` = '" + edit.value + "' WHERE (`"\
-                + edit.primaryKey + "` = '" + edit.pkValue + "')"
+        query = "UPDATE `" + db + "`.`" + table + "` SET "
+        for columnName, value in zip(edit.columnNames, edit.values):
+            query += "`" + columnName + "` = '" + value + "', "
+        query = query[:len(query) - 2]
+        query += " WHERE (`" + edit.primaryKey + "` = '" + edit.pkValue + "')"
         print("SQL Query: " + query)
         try:
             cursor.execute(query)

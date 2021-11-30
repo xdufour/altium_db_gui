@@ -22,13 +22,6 @@ fields = {}
 pendingEditList = []
 
 
-def setLineEditValidationState(lineEdit, state):
-    lineEdit.setProperty('valid', state)
-    lineEdit.style().unpolish(lineEdit)
-    lineEdit.style().unpolish(lineEdit)
-    lineEdit.repaint()
-
-
 class App:
     def __init__(self):
         app = QApplication(sys.argv)
@@ -66,470 +59,477 @@ class App:
             "database": ""
         }
 
-        def loadGUI(componentName):
-            updateCreateComponentFrame()
-            updateTableViewFrame()
-            print(f"Loaded GUI for {componentName}")
-
-        def updateCreateComponentFrame():
-            row = 2
-            self.dbColumnNames.clear()
-            self.dbColumnNames = mysql_query.getTableColumns(self.cnx, tableNameCombobox.currentText())
-            # Create widgets
-            for column in self.dbColumnNames:
-                if column not in permanentParams:
-                    # Delete any previously created widgets
-                    nameLower = column.lower()
-                    if nameLower in labels:
-                        labels[nameLower].deleteLater()
-                        del labels[nameLower]
-                    if nameLower in fields:
-                        fields[nameLower].deleteLater()
-                        del fields[nameLower]
-
-                    label = QLabel(column + ":")
-                    labels[nameLower] = label
-                    lineEdit = QLineEdit()
-                    fields[nameLower] = lineEdit
-                    componentEditorGridLayout.addWidget(label, row, label1Column)
-                    componentEditorGridLayout.addWidget(lineEdit, row, lineEdit1Column, 1, lineEditColSpan)
-                    row += 1
-            ceSupplierPnLineEdit.clear()
-            ceNameLineEdit.clear()
-
-        def updateTableViewFrame():
-            self.cachedTableData = mysql_query.getTableData(self.cnx, tableNameCombobox.currentText())
-
-            tableWidget.setSortingEnabled(False)
-            tableWidget.clear()
-            tableWidget.setColumnCount(len(self.dbColumnNames))
-            tableWidget.setRowCount(len(self.cachedTableData))
-            tableWidget.setHorizontalHeaderLabels(self.dbColumnNames)
-
-            fm = QFontMetrics(QFont(self.fontfamily, 9))
-            maxColumnWidth = 500
-            widthPadding = 40
-            cellWidths = []
-
-            # Insert data
-            tableWidget.blockSignals(True)
-            for row, rowData in enumerate(self.cachedTableData):
-                rowWidths = []
-                for column, cellData in enumerate(rowData):
-                    item = QTableWidgetItem(str(cellData))
-                    tableWidget.setItem(row, column, item)
-                    rowWidths.append(fm.boundingRect(str(cellData)).width() + widthPadding)
-                cellWidths.append(rowWidths)
-            tableWidget.blockSignals(False)
-
-            # Set column widths based on either header, data or maximum allowed width
-            for i in range(len(self.dbColumnNames)):
-                headerWidth = fm.boundingRect(self.dbColumnNames[i]).width() + widthPadding
-                dataWidth = utils.columnMax(cellWidths, i)
-                tableWidget.setColumnWidth(i, max([min(headerWidth, maxColumnWidth), min(dataWidth, maxColumnWidth)]))
-
-        def querySupplier():
-            dkpn = ceSupplierPnLineEdit.text()
-            print(f"Querying Digi-Key for {dkpn}")
-            result = dk_api.fetchDigikeyData(dkpn, tableNameCombobox.currentText(), utils.strippedList(self.dbColumnNames, permanentParams))
-            print(result)
-            if len(result) == 0:
-                setLineEditValidationState(ceSupplierPnLineEdit, False)
-            else:
-                setLineEditValidationState(ceSupplierPnLineEdit, True)
-            for columnName, value in result:
-                try:
-                    fields[columnName.lower()].setText(value)
-                    fields[columnName.lower()].setCursorPosition(0)
-                except KeyError:
-                    print(f"Error: no field found for \'{columnName.lower()}\'")
-
-        def addToDatabaseClicked():
-            rowData = []
-            for col in self.dbColumnNames:
-                try:
-                    rowData.append(utils.getFieldText(fields[col.lower()]))
-                except KeyError:
-                    print(f"Error: No field found for \'{col.lower()}\'")
-                    return
-            mysql_query.insertInDatabase(self.cnx, tableNameCombobox.currentText(), self.dbColumnNames, rowData)
-            updateTableViewFrame()
-            updateCreateComponentFrame()
-
-        def validateName(name):
-            tableWidgetItems = tableWidget.findItems(name, Qt.MatchExactly)
-            nameExists = False
-            for item in tableWidgetItems:
-                if item.column() == 0:
-                    nameExists = True
-            if nameExists:
-                setLineEditValidationState(ceNameLineEdit, False)
-            else:
-                setLineEditValidationState(ceNameLineEdit, None)
-            ceAddButton.setDisabled(len(name) == 0 or nameExists)
-
-        def loadDbTables():
-            self.dbTableList = mysql_query.getDatabaseTables(self.cnx)
-            tableNameCombobox.addItems(self.dbTableList)
-
-        def loadDbLogins():
-            self.loginInfoDict = json_appdata.loadDatabaseLoginInfo()
-            dbAddressLineEdit.insert(self.loginInfoDict['address'])
-            dbUserLineEdit.insert(self.loginInfoDict['user'])
-            dbPasswordLineEdit.insert(self.loginInfoDict['password'])
-            dbNameLineEdit.insert(self.loginInfoDict['database'])
-
-        def saveDbLogins():
-            json_appdata.saveDatabaseLoginInfo(dbAddressLineEdit.text(),
-                                               dbUserLineEdit.text(),
-                                               dbPasswordLineEdit.text(),
-                                               dbNameLineEdit.text())
-
-        def testDbConnection():
-            if not self.connected and not utils.dictHasEmptyValue(self.loginInfoDict):
-                try:
-                    self.cnx = mysql_query.init(dbUserLineEdit.text(),
-                                                dbPasswordLineEdit.text(),
-                                                dbAddressLineEdit.text(),
-                                                dbNameLineEdit.text())
-                    if self.cnx.is_connected:
-                        self.connected = True
-                        print("Connected to database successfully")
-                        loadDbTables()
-                        dbTestButton.setDisabled(True)
-                        dbTestButton.setText("Connected")
-                        tabWidget.setTabEnabled(0, True)
-                except mysql.connector.errors.ProgrammingError:
-                    print("Access Denied")
-                except mysql.connector.errors.InterfaceError:
-                    print("Invalid Login Information Format")
-            if not self.connected:
-                tabWidget.setTabEnabled(0, False)
-
-        def browseBtn():
-            dialog = QFileDialog()
-            dialog.setFileMode(QFileDialog.DirectoryOnly)
-            if dialog.exec_() == QDialog.Accepted:
-                directory = dialog.selectedFiles()[0]
-                updateSearchPath(directory)
-                json_appdata.saveLibrarySearchPath(directory)
-
-        def getLibSearchPath():
-            self.searchPathDict = json_appdata.loadLibrarySearchPath()
-            if 'filepath' in self.searchPathDict:
-                updateSearchPath(self.searchPathDict['filepath'])
-
-        def updateSearchPath(path):
-            searchPathLineEdit.setText(path)
-            print(f"Library search path set: {path}")
-            updatePathComboboxes(path)
-
-        def updatePathComboboxes(dirPath):
-            schlibFiles = glob.glob(dirPath + '/**/*.SchLib', recursive=True)
-            pcblibFiles = glob.glob(dirPath + '/**/*.PcbLib', recursive=True)
-            ceLibraryPathCombobox.clear()
-            ceFootprintPathCombobox.clear()
-            for f in schlibFiles:
-                ceLibraryPathCombobox.addItem(f[f.find('Symbols'):].replace('\\', '/', 255))
-            for f in pcblibFiles:
-                ceFootprintPathCombobox.addItem(f[f.find('Footprints'):].replace('\\', '/', 255))
-
-        def updateLibraryRefCombobox():
-            ceLibraryRefCombobox.clear()
-            ceLibraryRefCombobox.addItems(altium_parser.getLibraryRefList(
-                searchPathLineEdit.text() + '/' + ceLibraryPathCombobox.currentText()))
-
-        def updateFootprintRefCombobox():
-            ceFootprintRefCombobox.clear()
-            ceFootprintRefCombobox.addItems(altium_parser.getFootprintRefList(
-                searchPathLineEdit.text() + '/' + ceFootprintPathCombobox.currentText()))
-
-        def recordDbEdit(row, column):
-            primaryKey = 'Name'  # TODO: make adaptable
-            columnName = tableWidget.horizontalHeaderItem(column).text()
-            editedValue = tableWidget.item(row, column).text()
-            pk = None
-            pkValue = None
-            for i in range(tableWidget.columnCount()):
-                headerText = tableWidget.horizontalHeaderItem(i).text()
-                if headerText == primaryKey:
-                    pk = headerText
-                    pkValue = str(self.cachedTableData[row][i])
-            if pk is not None:
-                applyChangesButton.setEnabled(True)
-                for edit in pendingEditList:
-                    if pkValue == edit.pkValue:
-                        edit.append(columnName, editedValue)
-                        return
-                queryData = MySqlEditQueryData(columnName, editedValue, pk, pkValue)
-                pendingEditList.append(queryData)
-            else:
-                print("Error while finding edit's corresponding primary key")
-
-        def applyDbEdits():
-            mysql_query.editDatabase(self.cnx, self.loginInfoDict['database'],
-                                     tableNameCombobox.currentText(), pendingEditList)
-            applyChangesButton.setEnabled(False)
-            pendingEditList.clear()
-            updateTableViewFrame()
-
-        def filterTable(searchStr):
-            matches = tableWidget.findItems(searchStr, Qt.MatchContains)
-            rows = list(range(tableWidget.rowCount()))
-            for item in matches:
-                try:
-                    tableWidget.setRowHidden(item.row(), False)
-                    rows.remove(item.row())
-                except ValueError:
-                    pass
-            for r in rows:
-                tableWidget.setRowHidden(r, True)
-
-        def tableRowClicked(row):
-            print(f"Row {row} selected")
-            duplicateButton.setEnabled(True)
-            deleteButton.setEnabled(True)
-
         # set stylesheet
         file = QFile(":/dark/stylesheet.qss")
         file.open(QFile.ReadOnly | QFile.Text)
         stream = QTextStream(file)
         app.setStyleSheet(stream.readAll())
 
-        mainLayout = QVBoxLayout()
-        mainLayout.setContentsMargins(0, 0, 0, 0)
+        self.mainLayout = QVBoxLayout()
+        self.mainLayout.setContentsMargins(0, 0, 0, 0)
 
-        mainWindow = QWidget()
-        mainWindow.setProperty('mainWindow', True)
-        mainWindow.setMinimumSize(1920, 1080)
-        mainWindow.resize(1920, 1440)
-        mainWindow.setLayout(mainLayout)
+        self.mainWindow = QWidget()
+        self.mainWindow.setProperty('mainWindow', True)
+        self.mainWindow.setMinimumSize(1920, 1080)
+        self.mainWindow.resize(1920, 1440)
+        self.mainWindow.setLayout(self.mainLayout)
 
-        tabWidget = QTabWidget()
-        tabWidget.setTabPosition(QTabWidget.West)
-        mainLayout.addWidget(tabWidget)
+        self.tabWidget = QTabWidget()
+        self.tabWidget.setTabPosition(QTabWidget.West)
+        self.mainLayout.addWidget(self.tabWidget)
 
-        homeWidget = QWidget()
-        settingsWidget = QWidget()
+        self.homeWidget = QWidget()
+        self.settingsWidget = QWidget()
 
-        tabWidget.addTab(homeWidget, '')
-        tabWidget.setTabIcon(0, homeIcon)
-        tabWidget.addTab(settingsWidget, '')
-        tabWidget.setTabIcon(1, settingsIcon)
-        tabWidget.setIconSize(QtCore.QSize(64, 64))
+        self.tabWidget.addTab(self.homeWidget, '')
+        self.tabWidget.setTabIcon(0, homeIcon)
+        self.tabWidget.addTab(self.settingsWidget, '')
+        self.tabWidget.setTabIcon(1, settingsIcon)
+        self.tabWidget.setIconSize(QtCore.QSize(64, 64))
 
         # Settings page widgets
-        settingsVLayout = QVBoxLayout()
-        settingsTopHLayout = QHBoxLayout()
-        settingsWidget.setLayout(settingsVLayout)
-        settingsVLayout.addLayout(settingsTopHLayout)
-        settingsVLayout.addStretch(1)
+        self.settingsVLayout = QVBoxLayout()
+        self.settingsTopHLayout = QHBoxLayout()
+        self.settingsWidget.setLayout(self.settingsVLayout)
+        self.settingsVLayout.addLayout(self.settingsTopHLayout)
+        self.settingsVLayout.addStretch(1)
 
-        loginGroupBox = QGroupBox("MySQL Server Login")
-        loginGroupBox.setAlignment(Qt.AlignLeft)
+        self.loginGroupBox = QGroupBox("MySQL Server Login")
+        self.loginGroupBox.setAlignment(Qt.AlignLeft)
 
-        settingsTopHLayout.addWidget(loginGroupBox, 0)
-        loginGridLayout = QGridLayout()
-        loginGroupBox.setLayout(loginGridLayout)
-        loginGridLayout.setColumnMinimumWidth(1, 50)
-        loginGridLayout.setSpacing(20)
+        self.settingsTopHLayout.addWidget(self.loginGroupBox, 0)
+        self.loginGridLayout = QGridLayout()
+        self.loginGroupBox.setLayout(self.loginGridLayout)
+        self.loginGridLayout.setColumnMinimumWidth(1, 50)
+        self.loginGridLayout.setSpacing(20)
 
-        dbAddressLabel = QLabel("Address:")
-        dbAddressLineEdit = QLineEdit()
-        loginGridLayout.addWidget(dbAddressLabel, 0, 0)
-        loginGridLayout.addWidget(dbAddressLineEdit, 0, 2)
+        self.dbAddressLabel = QLabel("Address:")
+        self.dbAddressLineEdit = QLineEdit()
+        self.loginGridLayout.addWidget(self.dbAddressLabel, 0, 0)
+        self.loginGridLayout.addWidget(self.dbAddressLineEdit, 0, 2)
 
-        dbUserLabel = QLabel("User:")
-        dbUserLineEdit = QLineEdit()
-        loginGridLayout.addWidget(dbUserLabel, 1, 0)
-        loginGridLayout.addWidget(dbUserLineEdit, 1, 2)
+        self.dbUserLabel = QLabel("User:")
+        self.dbUserLineEdit = QLineEdit()
+        self.loginGridLayout.addWidget(self.dbUserLabel, 1, 0)
+        self.loginGridLayout.addWidget(self.dbUserLineEdit, 1, 2)
 
-        dbPasswordLabel = QLabel("Password:")
-        dbPasswordLineEdit = QLineEdit()
-        dbPasswordLineEdit.setEchoMode(QLineEdit.PasswordEchoOnEdit)
-        loginGridLayout.addWidget(dbPasswordLabel, 2, 0)
-        loginGridLayout.addWidget(dbPasswordLineEdit, 2, 2)
+        self.dbPasswordLabel = QLabel("Password:")
+        self.dbPasswordLineEdit = QLineEdit()
+        self.dbPasswordLineEdit.setEchoMode(QLineEdit.PasswordEchoOnEdit)
+        self.loginGridLayout.addWidget(self.dbPasswordLabel, 2, 0)
+        self.loginGridLayout.addWidget(self.dbPasswordLineEdit, 2, 2)
 
-        dbNameLabel = QLabel("Database:")
-        dbNameLineEdit = QLineEdit()
-        loginGridLayout.addWidget(dbNameLabel, 3, 0)
-        loginGridLayout.addWidget(dbNameLineEdit, 3, 2)
+        self.dbNameLabel = QLabel("Database:")
+        self.dbNameLineEdit = QLineEdit()
+        self.loginGridLayout.addWidget(self.dbNameLabel, 3, 0)
+        self.loginGridLayout.addWidget(self.dbNameLineEdit, 3, 2)
 
-        dbTestButton = QPushButton("Test")
-        loginGridLayout.addWidget(dbTestButton, 4, 0, 1, 2)
-        dbTestButton.released.connect(testDbConnection)
+        self.dbTestButton = QPushButton("Test")
+        self.loginGridLayout.addWidget(self.dbTestButton, 4, 0, 1, 2)
+        self.dbTestButton.released.connect(self.testDbConnection)
 
-        dbSaveButton = QPushButton("Save")
-        loginGridLayout.addWidget(dbSaveButton, 4, 2)
-        dbSaveButton.released.connect(saveDbLogins)
+        self.dbSaveButton = QPushButton("Save")
+        self.loginGridLayout.addWidget(self.dbSaveButton, 4, 2)
+        self.dbSaveButton.released.connect(self.saveDbLogins)
 
-        settingsTopRightVLayout = QVBoxLayout()
-        searchPathHLayout = QHBoxLayout()
-        settingsTopHLayout.addLayout(settingsTopRightVLayout, 1)
-        settingsTopRightVLayout.addLayout(searchPathHLayout)
-        settingsTopRightVLayout.addStretch(1)
-        searchPathLabel = QLabel("Library Search Path:")
-        searchPathHLayout.addWidget(searchPathLabel, 0, Qt.AlignLeft)
-        searchPathLineEdit = QLineEdit()
-        searchPathHLayout.addWidget(searchPathLineEdit, 1)
-        searchPathButton = QPushButton("Browse")
-        searchPathButton.released.connect(browseBtn)
-        searchPathHLayout.addWidget(searchPathButton)
+        self.settingsTopRightVLayout = QVBoxLayout()
+        self.searchPathHLayout = QHBoxLayout()
+        self.settingsTopHLayout.addLayout(self.settingsTopRightVLayout, 1)
+        self.settingsTopRightVLayout.addLayout(self.searchPathHLayout)
+        self.settingsTopRightVLayout.addStretch(1)
+        self.searchPathLabel = QLabel("Library Search Path:")
+        self.searchPathHLayout.addWidget(self.searchPathLabel, 0, Qt.AlignLeft)
+        self.searchPathLineEdit = QLineEdit()
+        self.searchPathHLayout.addWidget(self.searchPathLineEdit, 1)
+        self.searchPathButton = QPushButton("Browse")
+        self.searchPathButton.released.connect(self.browseBtn)
+        self.searchPathHLayout.addWidget(self.searchPathButton)
 
         # Home page widgets
-        label1Column = 0
-        lineEdit1Column = 1
-        spacingColumn = 3
-        label2Column = 4
-        lineEdit2Column = 5
-        lineEditColSpan = 2
+        self.label1Column = 0
+        self.lineEdit1Column = 1
+        self.spacingColumn = 3
+        self.label2Column = 4
+        self.lineEdit2Column = 5
+        self.lineEditColSpan = 2
 
-        homeVLayout = QVBoxLayout()
-        homeWidget.setLayout(homeVLayout)
+        self.homeVLayout = QVBoxLayout()
+        self.homeWidget.setLayout(self.homeVLayout)
 
-        hometopHLayout = QHBoxLayout()
-        homeVLayout.addLayout(hometopHLayout)
+        self.hometopHLayout = QHBoxLayout()
+        self.homeVLayout.addLayout(self.hometopHLayout)
 
-        componentEditorGroupBox = QGroupBox("Component Editor")
-        componentEditorGridLayout = QGridLayout()
-        componentEditorGroupBox.setLayout(componentEditorGridLayout)
-        hometopHLayout.addWidget(componentEditorGroupBox)
+        self.componentEditorGroupBox = QGroupBox("Component Editor")
+        self.componentEditorGridLayout = QGridLayout()
+        self.componentEditorGroupBox.setLayout(self.componentEditorGridLayout)
+        self.hometopHLayout.addWidget(self.componentEditorGroupBox)
 
-        tableGroupBox = QGroupBox("Table View")
-        homeVLayout.addSpacing(20)
-        homeVLayout.addWidget(tableGroupBox)
+        self.tableGroupBox = QGroupBox("Table View")
+        self.homeVLayout.addSpacing(20)
+        self.homeVLayout.addWidget(self.tableGroupBox)
 
-        tableGroupBoxVLayout = QVBoxLayout()
-        tableGroupBox.setLayout(tableGroupBoxVLayout)
+        self.tableGroupBoxVLayout = QVBoxLayout()
+        self.tableGroupBox.setLayout(self.tableGroupBoxVLayout)
 
-        actionsHLayout = QHBoxLayout()
-        tableGroupBoxVLayout.addLayout(actionsHLayout)
+        self.actionsHLayout = QHBoxLayout()
+        self.tableGroupBoxVLayout.addLayout(self.actionsHLayout)
 
-        tableSearchLineEdit = QLineEdit()
-        tableSearchLineEdit.setPlaceholderText("Search")
-        tableSearchLineEdit.setMinimumWidth(500)
-        tableSearchLineEdit.textChanged.connect(filterTable)
-        actionsHLayout.addWidget(tableSearchLineEdit)
-        actionsHLayout.addStretch(1)
+        self.tableSearchLineEdit = QLineEdit()
+        self.tableSearchLineEdit.setPlaceholderText("Search")
+        self.tableSearchLineEdit.setMinimumWidth(500)
+        self.tableSearchLineEdit.textChanged.connect(self.filterTable)
+        self.actionsHLayout.addWidget(self.tableSearchLineEdit)
+        self.actionsHLayout.addStretch(1)
 
-        applyChangesButton = QPushButton()
-        applyChangesButton.setIcon(applyIcon)
-        applyChangesButton.setIconSize(QSize(40, 40))
-        applyChangesButton.setDisabled(True)
-        applyChangesButton.released.connect(applyDbEdits)
-        applyChangesButton.setToolTip("Apply changes")
-        actionsHLayout.addWidget(applyChangesButton)
+        self.applyChangesButton = QPushButton()
+        self.applyChangesButton.setIcon(applyIcon)
+        self.applyChangesButton.setIconSize(QSize(40, 40))
+        self.applyChangesButton.setDisabled(True)
+        self.applyChangesButton.released.connect(self.applyDbEdits)
+        self.applyChangesButton.setToolTip("Apply changes")
+        self.actionsHLayout.addWidget(self.applyChangesButton)
 
-        duplicateButton = QPushButton()
-        duplicateButton.setIcon(editIcon)
-        duplicateButton.setIconSize(QSize(40, 40))
-        duplicateButton.setDisabled(True)
-        duplicateButton.setToolTip("Duplicate selected row")
-        actionsHLayout.addWidget(duplicateButton)
+        self.duplicateButton = QPushButton()
+        self.duplicateButton.setIcon(editIcon)
+        self.duplicateButton.setIconSize(QSize(40, 40))
+        self.duplicateButton.setDisabled(True)
+        self.duplicateButton.setToolTip("Duplicate selected row")
+        self.actionsHLayout.addWidget(self.duplicateButton)
 
-        deleteButton = QPushButton()
-        deleteButton.setIcon(deleteIcon)
-        deleteButton.setIconSize(QSize(40, 40))
-        deleteButton.setDisabled(True)
-        deleteButton.setToolTip("Delete selected row")
-        actionsHLayout.addWidget(deleteButton)
+        self.deleteButton = QPushButton()
+        self.deleteButton.setIcon(deleteIcon)
+        self.deleteButton.setIconSize(QSize(40, 40))
+        self.deleteButton.setDisabled(True)
+        self.deleteButton.setToolTip("Delete selected row")
+        self.actionsHLayout.addWidget(self.deleteButton)
 
-        tableWidget = QTableWidget()
-        tableWidget.setCornerButtonEnabled(False)
-        tableWidget.setAlternatingRowColors(True)
-        tableWidget.setFont(QFont('Roboto', 9))
-        tableWidget.setWordWrap(False)
-        tableWidget.setSortingEnabled(True)
-        tableWidget.cellChanged.connect(recordDbEdit)
-        tableWidget.verticalHeader().sectionClicked.connect(tableRowClicked)
-        tableGroupBoxVLayout.addWidget(tableWidget)
+        self.tableWidget = QTableWidget()
+        self.tableWidget.setCornerButtonEnabled(False)
+        self.tableWidget.setAlternatingRowColors(True)
+        self.tableWidget.setFont(QFont('Roboto', 9))
+        self.tableWidget.setWordWrap(False)
+        self.tableWidget.setSortingEnabled(True)
+        self.tableWidget.cellChanged.connect(self.recordDbEdit)
+        self.tableWidget.verticalHeader().sectionClicked.connect(self.tableRowClicked)
+        self.tableGroupBoxVLayout.addWidget(self.tableWidget)
 
-        tableLabel = QLabel("DB Table:")
-        componentEditorGridLayout.addWidget(tableLabel, 0, label1Column)
-        tableNameCombobox = QComboBox()
-        tableNameCombobox.currentTextChanged.connect(loadGUI)
-        componentEditorGridLayout.addWidget(tableNameCombobox, 0, lineEdit1Column, 1, lineEditColSpan)
+        self.tableLabel = QLabel("DB Table:")
+        self.componentEditorGridLayout.addWidget(self.tableLabel, 0, self.label1Column)
+        self.tableNameCombobox = QComboBox()
+        self.tableNameCombobox.currentTextChanged.connect(self.loadGUI)
+        self.componentEditorGridLayout.addWidget(self.tableNameCombobox, 0, self.lineEdit1Column, 1, self.lineEditColSpan)
 
-        ceAddButton = QPushButton("Add new entry")
-        ceAddButton.released.connect(addToDatabaseClicked)
-        ceAddButton.setEnabled(False)
-        ceAddButton.setProperty("accent", True)
-        ceAddButton.setStyleSheet("QPushButton#AccentButton { background-color: 51b7eb;}")
-        componentEditorGridLayout.addWidget(ceAddButton, 7, lineEdit2Column, 1, lineEditColSpan)
+        self.ceAddButton = QPushButton("Add new entry")
+        self.ceAddButton.released.connect(self.addToDatabaseClicked)
+        self.ceAddButton.setEnabled(False)
+        self.ceAddButton.setProperty("accent", True)
+        self.ceAddButton.setStyleSheet("QPushButton#AccentButton { background-color: 51b7eb;}")
+        self.componentEditorGridLayout.addWidget(self.ceAddButton, 7, self.lineEdit2Column, 1, self.lineEditColSpan)
 
-        ceNameLabel = QLabel("Name:")
-        componentEditorGridLayout.addWidget(ceNameLabel, 1, label1Column)
-        ceNameLineEdit = QLineEdit()
-        ceNameLineEdit.textChanged.connect(validateName)
-        fields['name'] = ceNameLineEdit
-        componentEditorGridLayout.addWidget(ceNameLineEdit, 1, lineEdit1Column, 1, lineEditColSpan)
+        self.ceNameLabel = QLabel("Name:")
+        self.componentEditorGridLayout.addWidget(self.ceNameLabel, 1, self.label1Column)
+        self.ceNameLineEdit = QLineEdit()
+        self.ceNameLineEdit.textChanged.connect(self.validateName)
+        fields['name'] = self.ceNameLineEdit
+        self.componentEditorGridLayout.addWidget(self.ceNameLineEdit, 1, self.lineEdit1Column, 1, self.lineEditColSpan)
 
-        ceSupplierLabel = QLabel("Supplier 1:")
-        componentEditorGridLayout.addWidget(ceSupplierLabel, 1, label2Column)
-        ceSupplierCombobox = QComboBox()
-        ceSupplierCombobox.addItem("Digi-Key")
-        ceSupplierCombobox.setCurrentIndex(0)
-        fields['supplier 1'] = ceSupplierCombobox
-        componentEditorGridLayout.addWidget(ceSupplierCombobox, 1, lineEdit2Column, 1, lineEditColSpan)
+        self.ceSupplierLabel = QLabel("Supplier 1:")
+        self.componentEditorGridLayout.addWidget(self.ceSupplierLabel, 1, self.label2Column)
+        self.ceSupplierCombobox = QComboBox()
+        self.ceSupplierCombobox.addItem("Digi-Key")
+        self.ceSupplierCombobox.setCurrentIndex(0)
+        fields['supplier 1'] = self.ceSupplierCombobox
+        self.componentEditorGridLayout.addWidget(self.ceSupplierCombobox, 1, self.lineEdit2Column, 1, self.lineEditColSpan)
 
-        ceSupplierPnLabel = QLabel("Supplier Part Number 1:")
-        componentEditorGridLayout.addWidget(ceSupplierPnLabel, 2, label2Column)
-        ceSupplierPnLineEdit = QLineEdit()
-        ceSupplierPnLineEdit.returnPressed.connect(querySupplier)
-        ceSupplierPnLineEdit.textChanged.connect(lambda: setLineEditValidationState(ceSupplierPnLineEdit, None))
-        fields['supplier part number 1'] = ceSupplierPnLineEdit
-        componentEditorGridLayout.addWidget(ceSupplierPnLineEdit, 2, lineEdit2Column)
+        self.ceSupplierPnLabel = QLabel("Supplier Part Number 1:")
+        self.componentEditorGridLayout.addWidget(self.ceSupplierPnLabel, 2, self.label2Column)
+        self.ceSupplierPnLineEdit = QLineEdit()
+        self.ceSupplierPnLineEdit.returnPressed.connect(self.querySupplier)
+        self.ceSupplierPnLineEdit.textChanged.connect(
+            lambda: utils.setLineEditValidationState(self.ceSupplierPnLineEdit, None))
+        fields['supplier part number 1'] = self.ceSupplierPnLineEdit
+        self.componentEditorGridLayout.addWidget(self.ceSupplierPnLineEdit, 2, self.lineEdit2Column)
 
-        ceSupplierPnButton = QPushButton()
-        ceSupplierPnButton.setIcon(downloadIcon)
-        ceSupplierPnButton.setIconSize(QSize(48, 30))
-        ceSupplierPnButton.setToolTip("Query supplier for part number")
-        ceSupplierPnButton.released.connect(querySupplier)
-        componentEditorGridLayout.addWidget(ceSupplierPnButton, 2, lineEdit2Column + 1)
+        self.ceSupplierPnButton = QPushButton()
+        self.ceSupplierPnButton.setIcon(downloadIcon)
+        self.ceSupplierPnButton.setIconSize(QSize(48, 30))
+        self.ceSupplierPnButton.setToolTip("Query supplier for part number")
+        self.ceSupplierPnButton.released.connect(self.querySupplier)
+        self.componentEditorGridLayout.addWidget(self.ceSupplierPnButton, 2, self.lineEdit2Column + 1)
 
-        ceLibraryPathLabel = QLabel("Library Path" + ":")
-        componentEditorGridLayout.addWidget(ceLibraryPathLabel, 3, label2Column)
-        ceLibraryPathCombobox = QComboBox()
-        ceLibraryPathCombobox.currentTextChanged.connect(updateLibraryRefCombobox)
-        fields['library path'] = ceLibraryPathCombobox
-        componentEditorGridLayout.addWidget(ceLibraryPathCombobox, 3, lineEdit2Column, 1, lineEditColSpan)
+        self.ceLibraryPathLabel = QLabel("Library Path" + ":")
+        self.componentEditorGridLayout.addWidget(self.ceLibraryPathLabel, 3, self.label2Column)
+        self.ceLibraryPathCombobox = QComboBox()
+        self.ceLibraryPathCombobox.currentTextChanged.connect(self.updateLibraryRefCombobox)
+        fields['library path'] = self.ceLibraryPathCombobox
+        self.componentEditorGridLayout.addWidget(self.ceLibraryPathCombobox, 3, self.lineEdit2Column, 1,
+                                                 self.lineEditColSpan)
 
-        ceLibraryRefLabel = QLabel("Library Ref" + ":")
-        componentEditorGridLayout.addWidget(ceLibraryRefLabel, 4, label2Column)
-        ceLibraryRefCombobox = QComboBox()
-        fields['library ref'] = ceLibraryRefCombobox
-        componentEditorGridLayout.addWidget(ceLibraryRefCombobox, 4, lineEdit2Column, 1, lineEditColSpan)
+        self.ceLibraryRefLabel = QLabel("Library Ref" + ":")
+        self.componentEditorGridLayout.addWidget(self.ceLibraryRefLabel, 4, self.label2Column)
+        self.ceLibraryRefCombobox = QComboBox()
+        fields['library ref'] = self.ceLibraryRefCombobox
+        self.componentEditorGridLayout.addWidget(self.ceLibraryRefCombobox, 4, self.lineEdit2Column, 1,
+                                                 self.lineEditColSpan)
 
-        ceFootprintPathLabel = QLabel("Footprint Path" + ":")
-        componentEditorGridLayout.addWidget(ceFootprintPathLabel, 5, label2Column)
-        ceFootprintPathCombobox = QComboBox()
-        ceFootprintPathCombobox.currentTextChanged.connect(updateFootprintRefCombobox)
-        fields['footprint path'] = ceFootprintPathCombobox
-        componentEditorGridLayout.addWidget(ceFootprintPathCombobox, 5, lineEdit2Column, 1, lineEditColSpan)
+        self.ceFootprintPathLabel = QLabel("Footprint Path" + ":")
+        self.componentEditorGridLayout.addWidget(self.ceFootprintPathLabel, 5, self.label2Column)
+        self.ceFootprintPathCombobox = QComboBox()
+        self.ceFootprintPathCombobox.currentTextChanged.connect(self.updateFootprintRefCombobox)
+        fields['footprint path'] = self.ceFootprintPathCombobox
+        self.componentEditorGridLayout.addWidget(self.ceFootprintPathCombobox, 5, self.lineEdit2Column, 1,
+                                                 self.lineEditColSpan)
 
-        ceFootprintRefLabel = QLabel("Footprint Ref" + ":")
-        componentEditorGridLayout.addWidget(ceFootprintRefLabel, 6, label2Column)
-        ceFootprintRefCombobox = QComboBox()
-        fields['footprint ref'] = ceFootprintRefCombobox
-        componentEditorGridLayout.addWidget(ceFootprintRefCombobox, 6, lineEdit2Column, 1, lineEditColSpan)
+        self.ceFootprintRefLabel = QLabel("Footprint Ref" + ":")
+        self.componentEditorGridLayout.addWidget(self.ceFootprintRefLabel, 6, self.label2Column)
+        self.ceFootprintRefCombobox = QComboBox()
+        fields['footprint ref'] = self.ceFootprintRefCombobox
+        self.componentEditorGridLayout.addWidget(self.ceFootprintRefCombobox, 6, self.lineEdit2Column, 1,
+                                                 self.lineEditColSpan)
 
-        componentEditorGridLayout.setSpacing(20)
-        componentEditorGridLayout.setColumnMinimumWidth(spacingColumn, 50)
-        componentEditorGridLayout.setColumnStretch(lineEdit1Column, 1)
-        componentEditorGridLayout.setColumnStretch(lineEdit2Column, 1)
-        componentEditorGridLayout.setColumnMinimumWidth(lineEdit2Column + 1, 80)
-        componentEditorGridLayout.setColumnMinimumWidth(lineEdit1Column + 1, 80)
+        self.componentEditorGridLayout.setSpacing(20)
+        self.componentEditorGridLayout.setColumnMinimumWidth(self.spacingColumn, 50)
+        self.componentEditorGridLayout.setColumnStretch(self.lineEdit1Column, 1)
+        self.componentEditorGridLayout.setColumnStretch(self.lineEdit2Column, 1)
+        self.componentEditorGridLayout.setColumnMinimumWidth(self.lineEdit2Column + 1, 80)
+        self.componentEditorGridLayout.setColumnMinimumWidth(self.lineEdit1Column + 1, 80)
 
-        loadDbLogins()
-        testDbConnection()
-        getLibSearchPath()
+        self.loadDbLogins()
+        self.testDbConnection()
+        self.getLibSearchPath()
 
-        mainWindow.show()
-        applyChangesButton.setMinimumWidth(ceSupplierPnButton.width())
-        duplicateButton.setMinimumWidth(ceSupplierPnButton.width())
-        deleteButton.setMinimumWidth(ceSupplierPnButton.width())
-        tableSearchLineEdit.setFixedWidth(max(tableWidget.verticalHeader().width() + tableWidget.columnWidth(0), 400))
+        self.mainWindow.show()
+        self.applyChangesButton.setMinimumWidth(self.ceSupplierPnButton.width())
+        self.duplicateButton.setMinimumWidth(self.ceSupplierPnButton.width())
+        self.deleteButton.setMinimumWidth(self.ceSupplierPnButton.width())
+        self.tableSearchLineEdit.setFixedWidth(max(self.tableWidget.verticalHeader().width() +
+                                                   self.tableWidget.columnWidth(0), 400))
         sys.exit(app.exec())
+
+    def loadGUI(self, componentName):
+        self.updateCreateComponentFrame()
+        self.updateTableViewFrame()
+        print(f"Loaded GUI for {componentName}")
+
+    def updateCreateComponentFrame(self):
+        row = 2
+        self.dbColumnNames.clear()
+        self.dbColumnNames = mysql_query.getTableColumns(self.cnx, self.tableNameCombobox.currentText())
+        # Create widgets
+        for column in self.dbColumnNames:
+            if column not in permanentParams:
+                # Delete any previously created widgets
+                nameLower = column.lower()
+                if nameLower in labels:
+                    labels[nameLower].deleteLater()
+                    del labels[nameLower]
+                if nameLower in fields:
+                    fields[nameLower].deleteLater()
+                    del fields[nameLower]
+
+                label = QLabel(column + ":")
+                labels[nameLower] = label
+                lineEdit = QLineEdit()
+                fields[nameLower] = lineEdit
+                self.componentEditorGridLayout.addWidget(label, row, self.label1Column)
+                self.componentEditorGridLayout.addWidget(lineEdit, row, self.lineEdit1Column, 1, self.lineEditColSpan)
+                row += 1
+        self.ceSupplierPnLineEdit.clear()
+        self.ceNameLineEdit.clear()
+
+    def updateTableViewFrame(self):
+        self.cachedTableData = mysql_query.getTableData(self.cnx, self.tableNameCombobox.currentText())
+
+        self.tableWidget.setSortingEnabled(False)
+        self.tableWidget.clear()
+        self.tableWidget.setColumnCount(len(self.dbColumnNames))
+        self.tableWidget.setRowCount(len(self.cachedTableData))
+        self.tableWidget.setHorizontalHeaderLabels(self.dbColumnNames)
+
+        fm = QFontMetrics(QFont(self.fontfamily, 9))
+        maxColumnWidth = 500
+        widthPadding = 40
+        cellWidths = []
+
+        # Insert data
+        self.tableWidget.blockSignals(True)
+        for row, rowData in enumerate(self.cachedTableData):
+            rowWidths = []
+            for column, cellData in enumerate(rowData):
+                item = QTableWidgetItem(str(cellData))
+                self.tableWidget.setItem(row, column, item)
+                rowWidths.append(fm.boundingRect(str(cellData)).width() + widthPadding)
+            cellWidths.append(rowWidths)
+        self.tableWidget.blockSignals(False)
+
+        # Set column widths based on either header, data or maximum allowed width
+        for i in range(len(self.dbColumnNames)):
+            headerWidth = fm.boundingRect(self.dbColumnNames[i]).width() + widthPadding
+            dataWidth = utils.columnMax(cellWidths, i)
+            self.tableWidget.setColumnWidth(i, max([min(headerWidth, maxColumnWidth), min(dataWidth, maxColumnWidth)]))
+
+    def querySupplier(self):
+        dkpn = self.ceSupplierPnLineEdit.text()
+        print(f"Querying Digi-Key for {dkpn}")
+        result = dk_api.fetchDigikeyData(dkpn, self.tableNameCombobox.currentText(),
+                                         utils.strippedList(self.dbColumnNames, permanentParams))
+        print(result)
+        if len(result) == 0:
+            utils.setLineEditValidationState(self.ceSupplierPnLineEdit, False)
+        else:
+            utils.setLineEditValidationState(self.ceSupplierPnLineEdit, True)
+        for columnName, value in result:
+            try:
+                fields[columnName.lower()].setText(value)
+                fields[columnName.lower()].setCursorPosition(0)
+            except KeyError:
+                print(f"Error: no field found for \'{columnName.lower()}\'")
+
+    def addToDatabaseClicked(self):
+        rowData = []
+        for col in self.dbColumnNames:
+            try:
+                rowData.append(utils.getFieldText(fields[col.lower()]))
+            except KeyError:
+                print(f"Error: No field found for \'{col.lower()}\'")
+                return
+        mysql_query.insertInDatabase(self.cnx, self.tableNameCombobox.currentText(), self.dbColumnNames, rowData)
+        self.updateTableViewFrame()
+        self.updateCreateComponentFrame()
+
+    def validateName(self, name):
+        tableWidgetItems = self.tableWidget.findItems(name, Qt.MatchExactly)
+        nameExists = False
+        for item in tableWidgetItems:
+            if item.column() == 0:
+                nameExists = True
+        if nameExists:
+            utils.setLineEditValidationState(self.ceNameLineEdit, False)
+        else:
+            utils.setLineEditValidationState(self.ceNameLineEdit, None)
+        self.ceAddButton.setDisabled(len(name) == 0 or nameExists)
+
+    def loadDbTables(self):
+        self.dbTableList = mysql_query.getDatabaseTables(self.cnx)
+        self.tableNameCombobox.addItems(self.dbTableList)
+
+    def loadDbLogins(self):
+        self.loginInfoDict = json_appdata.loadDatabaseLoginInfo()
+        self.dbAddressLineEdit.insert(self.loginInfoDict['address'])
+        self.dbUserLineEdit.insert(self.loginInfoDict['user'])
+        self.dbPasswordLineEdit.insert(self.loginInfoDict['password'])
+        self.dbNameLineEdit.insert(self.loginInfoDict['database'])
+
+    def saveDbLogins(self):
+        json_appdata.saveDatabaseLoginInfo(self.dbAddressLineEdit.text(),
+                                           self.dbUserLineEdit.text(),
+                                           self.dbPasswordLineEdit.text(),
+                                           self.dbNameLineEdit.text())
+
+    def testDbConnection(self):
+        if not self.connected and not utils.dictHasEmptyValue(self.loginInfoDict):
+            try:
+                self.cnx = mysql_query.init(self.dbUserLineEdit.text(),
+                                            self.dbPasswordLineEdit.text(),
+                                            self.dbAddressLineEdit.text(),
+                                            self.dbNameLineEdit.text())
+                if self.cnx.is_connected:
+                    self.connected = True
+                    print("Connected to database successfully")
+                    self.loadDbTables()
+                    self.dbTestButton.setDisabled(True)
+                    self.dbTestButton.setText("Connected")
+                    self.tabWidget.setTabEnabled(0, True)
+            except mysql.connector.errors.ProgrammingError:
+                print("Access Denied")
+            except mysql.connector.errors.InterfaceError:
+                print("Invalid Login Information Format")
+        if not self.connected:
+            self.tabWidget.setTabEnabled(0, False)
+
+    def browseBtn(self):
+        dialog = QFileDialog()
+        dialog.setFileMode(QFileDialog.DirectoryOnly)
+        if dialog.exec_() == QDialog.Accepted:
+            directory = dialog.selectedFiles()[0]
+            self.updateSearchPath(directory)
+            json_appdata.saveLibrarySearchPath(directory)
+
+    def getLibSearchPath(self):
+        self.searchPathDict = json_appdata.loadLibrarySearchPath()
+        if 'filepath' in self.searchPathDict:
+            self.updateSearchPath(self.searchPathDict['filepath'])
+
+    def updateSearchPath(self, path):
+        self.searchPathLineEdit.setText(path)
+        print(f"Library search path set: {path}")
+        self.updatePathComboboxes(path)
+
+    def updatePathComboboxes(self, dirPath):
+        schLibFiles = glob.glob(dirPath + '/**/*.SchLib', recursive=True)
+        pcbLibFiles = glob.glob(dirPath + '/**/*.PcbLib', recursive=True)
+        self.ceLibraryPathCombobox.clear()
+        self.ceFootprintPathCombobox.clear()
+        for f in schLibFiles:
+            self.ceLibraryPathCombobox.addItem(f[f.find('Symbols'):].replace('\\', '/', 255))
+        for f in pcbLibFiles:
+            self.ceFootprintPathCombobox.addItem(f[f.find('Footprints'):].replace('\\', '/', 255))
+
+    def updateLibraryRefCombobox(self):
+        self.ceLibraryRefCombobox.clear()
+        self.ceLibraryRefCombobox.addItems(altium_parser.getLibraryRefList(
+            self.searchPathLineEdit.text() + '/' + self.ceLibraryPathCombobox.currentText()))
+
+    def updateFootprintRefCombobox(self):
+        self.ceFootprintRefCombobox.clear()
+        self.ceFootprintRefCombobox.addItems(altium_parser.getFootprintRefList(
+            self.searchPathLineEdit.text() + '/' + self.ceFootprintPathCombobox.currentText()))
+
+    def recordDbEdit(self, row, column):
+        primaryKey = 'Name'  # TODO: make adaptable
+        columnName = self.tableWidget.horizontalHeaderItem(column).text()
+        editedValue = self.tableWidget.item(row, column).text()
+        pk = None
+        pkValue = None
+        for i in range(self.tableWidget.columnCount()):
+            headerText = self.tableWidget.horizontalHeaderItem(i).text()
+            if headerText == primaryKey:
+                pk = headerText
+                pkValue = str(self.cachedTableData[row][i])
+        if pk is not None:
+            self.applyChangesButton.setEnabled(True)
+            for edit in pendingEditList:
+                if pkValue == edit.pkValue:
+                    edit.append(columnName, editedValue)
+                    return
+            queryData = MySqlEditQueryData(columnName, editedValue, pk, pkValue)
+            pendingEditList.append(queryData)
+        else:
+            print("Error while finding edit's corresponding primary key")
+
+    def applyDbEdits(self):
+        mysql_query.editDatabase(self.cnx, self.loginInfoDict['database'],
+                                 self.tableNameCombobox.currentText(), pendingEditList)
+        self.applyChangesButton.setEnabled(False)
+        pendingEditList.clear()
+        self.updateTableViewFrame()
+
+    def filterTable(self, searchStr):
+        matches = self.tableWidget.findItems(searchStr, Qt.MatchContains)
+        rows = list(range(self.tableWidget.rowCount()))
+        for item in matches:
+            try:
+                self.tableWidget.setRowHidden(item.row(), False)
+                rows.remove(item.row())
+            except ValueError:
+                pass
+        for r in rows:
+            self.tableWidget.setRowHidden(r, True)
+
+    def tableRowClicked(self, row):
+        print(f"Row {row} selected")
+        self.duplicateButton.setEnabled(True)
+        self.deleteButton.setEnabled(True)
 
 
 if __name__ == "__main__":

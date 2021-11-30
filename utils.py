@@ -32,3 +32,10 @@ def getFieldText(widget):
         return widget.text()
     elif widget.metaObject().className() == "QComboBox":
         return widget.currentText()
+
+
+def setLineEditValidationState(lineEdit, state):
+    lineEdit.setProperty('valid', state)
+    lineEdit.style().unpolish(lineEdit)
+    lineEdit.style().unpolish(lineEdit)
+    lineEdit.repaint()

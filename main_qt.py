@@ -126,7 +126,8 @@ class App:
                 dataWidth = utils.columnMax(cellWidths, i)
                 tableWidget.setColumnWidth(i, max([min(headerWidth, maxColumnWidth), min(dataWidth, maxColumnWidth)]))
 
-            tableWidget.setSortingEnabled(True)
+        def tableRowClicked(row):
+            print(f"Row {row} selected")
 
         def querySupplier():
             dkpn = ceSupplierPnLineEdit.text()
@@ -271,6 +272,18 @@ class App:
             pendingEditList.clear()
             updateTableViewFrame()
 
+        def filterTable(searchStr):
+            matches = tableWidget.findItems(searchStr, Qt.MatchContains)
+            rows = list(range(tableWidget.rowCount()))
+            for item in matches:
+                try:
+                    tableWidget.setRowHidden(item.row(), False)
+                    rows.remove(item.row())
+                except ValueError:
+                    pass
+            for r in rows:
+                tableWidget.setRowHidden(r, True)
+
         # set stylesheet
         file = QFile(":/dark/stylesheet.qss")
         file.open(QFile.ReadOnly | QFile.Text)
@@ -385,6 +398,12 @@ class App:
 
         actionsHLayout = QHBoxLayout()
         tableGroupBoxVLayout.addLayout(actionsHLayout)
+
+        tableSearchLineEdit = QLineEdit()
+        tableSearchLineEdit.setPlaceholderText("Search")
+        tableSearchLineEdit.setMinimumWidth(500)
+        tableSearchLineEdit.textChanged.connect(filterTable)
+        actionsHLayout.addWidget(tableSearchLineEdit)
         actionsHLayout.addStretch(1)
 
         applyChangesButton = QPushButton()
@@ -414,7 +433,9 @@ class App:
         tableWidget.setAlternatingRowColors(True)
         tableWidget.setFont(QFont('Roboto', 9))
         tableWidget.setWordWrap(False)
+        tableWidget.setSortingEnabled(True)
         tableWidget.cellChanged.connect(recordDbEdit)
+        tableWidget.verticalHeader().sectionClicked.connect(tableRowClicked)
         tableGroupBoxVLayout.addWidget(tableWidget)
 
         tableLabel = QLabel("DB Table:")

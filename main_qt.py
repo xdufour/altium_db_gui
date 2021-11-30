@@ -126,9 +126,6 @@ class App:
                 dataWidth = utils.columnMax(cellWidths, i)
                 tableWidget.setColumnWidth(i, max([min(headerWidth, maxColumnWidth), min(dataWidth, maxColumnWidth)]))
 
-        def tableRowClicked(row):
-            print(f"Row {row} selected")
-
         def querySupplier():
             dkpn = ceSupplierPnLineEdit.text()
             print(f"Querying Digi-Key for {dkpn}")
@@ -283,6 +280,11 @@ class App:
                     pass
             for r in rows:
                 tableWidget.setRowHidden(r, True)
+
+        def tableRowClicked(row):
+            print(f"Row {row} selected")
+            duplicateButton.setEnabled(True)
+            deleteButton.setEnabled(True)
 
         # set stylesheet
         file = QFile(":/dark/stylesheet.qss")
@@ -444,9 +446,6 @@ class App:
         tableNameCombobox.currentTextChanged.connect(loadGUI)
         componentEditorGridLayout.addWidget(tableNameCombobox, 0, lineEdit1Column, 1, lineEditColSpan)
 
-        loadDbLogins()
-        testDbConnection()
-
         ceAddButton = QPushButton("Add new entry")
         ceAddButton.released.connect(addToDatabaseClicked)
         ceAddButton.setEnabled(False)
@@ -517,6 +516,8 @@ class App:
         componentEditorGridLayout.setColumnMinimumWidth(lineEdit2Column + 1, 80)
         componentEditorGridLayout.setColumnMinimumWidth(lineEdit1Column + 1, 80)
 
+        loadDbLogins()
+        testDbConnection()
         getLibSearchPath()
 
         mainWindow.show()

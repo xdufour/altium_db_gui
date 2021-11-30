@@ -1755,7 +1755,6 @@ QAbstractItemView::item:pressed
 
 QAbstractItemView::item:selected:!active
 {
-    background: rgba(61, 173, 232, 0.1);
     border-color: #3daee9;
 }
 
@@ -1773,7 +1772,7 @@ QAbstractItemView::item:selected:active
 
 QAbstractItemView::item:selected:hover
 {
-    color: #1c1c1c;
+
 }
 
 QHeaderView

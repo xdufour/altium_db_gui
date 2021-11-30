@@ -94,6 +94,8 @@ class App:
                     componentEditorGridLayout.addWidget(label, row, label1Column)
                     componentEditorGridLayout.addWidget(lineEdit, row, lineEdit1Column, 1, lineEditColSpan)
                     row += 1
+            ceSupplierPnLineEdit.clear()
+            ceNameLineEdit.clear()
 
         def updateTableViewFrame():
             self.cachedTableData = mysql_query.getTableData(self.cnx, tableNameCombobox.currentText())
@@ -152,6 +154,7 @@ class App:
                     return
             mysql_query.insertInDatabase(self.cnx, tableNameCombobox.currentText(), self.dbColumnNames, rowData)
             updateTableViewFrame()
+            updateCreateComponentFrame()
 
         def validateName(name):
             tableWidgetItems = tableWidget.findItems(name, Qt.MatchExactly)
@@ -159,9 +162,10 @@ class App:
             for item in tableWidgetItems:
                 if item.column() == 0:
                     nameExists = True
-            ceNameLineEdit.setProperty('valid', not nameExists)
-            ceNameLineEdit.style().unpolish(ceNameLineEdit)
-            ceNameLineEdit.style().polish(ceNameLineEdit)
+            if nameExists:
+                setLineEditValidationState(ceNameLineEdit, False)
+            else:
+                setLineEditValidationState(ceNameLineEdit, None)
             ceAddButton.setDisabled(len(name) == 0 or nameExists)
 
         def loadDbTables():
@@ -169,7 +173,7 @@ class App:
             tableNameCombobox.addItems(self.dbTableList)
 
         def loadDbLogins():
-            self.loginInfoDict = json_appdata.getDatabaseLoginInfo()
+            self.loginInfoDict = json_appdata.loadDatabaseLoginInfo()
             dbAddressLineEdit.insert(self.loginInfoDict['address'])
             dbUserLineEdit.insert(self.loginInfoDict['user'])
             dbPasswordLineEdit.insert(self.loginInfoDict['password'])
@@ -211,7 +215,7 @@ class App:
                 json_appdata.saveLibrarySearchPath(directory)
 
         def getLibSearchPath():
-            self.searchPathDict = json_appdata.getLibrarySearchPath()
+            self.searchPathDict = json_appdata.loadLibrarySearchPath()
             if 'filepath' in self.searchPathDict:
                 updateSearchPath(self.searchPathDict['filepath'])
 

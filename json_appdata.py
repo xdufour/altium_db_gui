@@ -18,7 +18,7 @@ def saveDatabaseLoginInfo(address, user, password, database):
     print(data_dict)
 
 
-def getDatabaseLoginInfo():
+def loadDatabaseLoginInfo():
     json_object = {
         "address": "",
         "user": "",
@@ -46,7 +46,7 @@ def saveLibrarySearchPath(path):
     print(data_dict)
 
 
-def getLibrarySearchPath():
+def loadLibrarySearchPath():
     json_object = {}
     try:
         with open(lib_search_path_filename, 'r') as openfile:

@@ -523,6 +523,7 @@ class App:
         applyChangesButton.setMinimumWidth(ceSupplierPnButton.width())
         duplicateButton.setMinimumWidth(ceSupplierPnButton.width())
         deleteButton.setMinimumWidth(ceSupplierPnButton.width())
+        tableSearchLineEdit.setFixedWidth(max(tableWidget.verticalHeader().width() + tableWidget.columnWidth(0), 400))
         sys.exit(app.exec())
 
 

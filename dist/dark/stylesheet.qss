@@ -427,6 +427,11 @@ QLineEdit
     color: #eff0f1;
 }
 
+QLineEdit:read-only
+{
+    color: #adaead;
+}
+
 QLineEdit[valid=false],
 QLineEdit[valid=false]:hover,
 QLineEdit[valid=false]:focus
@@ -869,6 +874,14 @@ QTreeView:focus
 {
     border: 0.04em solid #3daee9;
     color: #eff0f1;
+}
+
+QLineEdit:hover:read-only,
+QLineEdit:hover:pressed:read-only,
+QLineEdit:focus:read-only
+{
+    border: 0.04em solid #2f2f2f;
+    color: #adaead;
 }
 
 QComboBox:focus,

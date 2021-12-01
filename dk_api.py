@@ -19,9 +19,17 @@ opamp_dict = {
     "Voltage - Span (Max)": "Voltage Supply",
 }
 
+resistor_dict = {
+    "Resistance": "Resistance",
+    "Tolerance": "Tolerance",
+    "Power (Watts)": "Power",
+    "Temperature Coefficient": "Temperature Coefficient"
+}
+
 dictionary_map = {
     "capacitors": capacitor_dict,
     "opamps": opamp_dict,
+    "resistors": resistor_dict
 }
 
 

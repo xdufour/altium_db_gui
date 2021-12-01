@@ -107,7 +107,8 @@ class App:
 
         self.loginGridLayout = QGridLayout()
         self.loginGroupBox.setLayout(self.loginGridLayout)
-        self.loginGridLayout.setColumnMinimumWidth(1, 50)
+        self.loginGridLayout.setColumnMinimumWidth(0, 120)
+        self.loginGridLayout.setColumnMinimumWidth(1, 120)
         self.loginGridLayout.setSpacing(20)
 
         self.dbAddressLabel = QLabel("Address:")
@@ -322,9 +323,6 @@ class App:
 
     def updateCreateComponentFrame(self):
         row = 2
-        self.dbColumnNames.clear()
-        self.dbColumnNames = mysql_query.getTableColumns(self.cnx, self.tableNameCombobox.currentText())
-        # Create widgets
         for column in self.dbColumnNames:
             if column not in permanentParams:
                 # Delete any previously created widgets
@@ -335,6 +333,12 @@ class App:
                 if nameLower in fields:
                     fields[nameLower].deleteLater()
                     del fields[nameLower]
+        self.dbColumnNames.clear()
+        self.dbColumnNames = mysql_query.getTableColumns(self.cnx, self.tableNameCombobox.currentText())
+        # Create widgets
+        for column in self.dbColumnNames:
+            if column not in permanentParams:
+                nameLower = column.lower()
 
                 label = QLabel(column + ":")
                 labels[nameLower] = label
@@ -370,6 +374,7 @@ class App:
                 rowWidths.append(fm.boundingRect(str(cellData)).width() + widthPadding)
             cellWidths.append(rowWidths)
         self.tableWidget.blockSignals(False)
+        self.tableWidget.setSortingEnabled(True)
 
         # Set column widths based on either header, data or maximum allowed width
         for i in range(len(self.dbColumnNames)):
@@ -547,7 +552,7 @@ class App:
             unfilteredColumns = mysql_query.getTableColumns(self.cnx, table)
             filteredColumns = []
             for col in unfilteredColumns:
-                if col not in permanentParams:
+                if col not in permanentParams and col not in ['Description', 'Manufacturer', 'Manufacturer Part Number']:
                     filteredColumns.append(col)
             print(filteredColumns)
             tablesColumns.append(filteredColumns)

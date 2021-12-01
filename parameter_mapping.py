@@ -6,6 +6,7 @@ import mysql_query
 labels = []
 lineEdits = []
 
+
 class ParameterMappingGroupBox(QGroupBox):
     def __init__(self, tableList, tableColumnsList, supplierList):
         super().__init__("Parameter mapping")
@@ -47,6 +48,10 @@ class ParameterMappingGroupBox(QGroupBox):
         self.supParamLabel = QLabel("Supplier Parameter")
         self.mainGridLayout.addWidget(self.supParamLabel, self.labelRow, self.supplierParamsColumn)
 
+        self.saveButton = QPushButton("Save")
+        self.saveButton.setEnabled(False)
+        self.mainGridLayout.addWidget(self.saveButton, self.fieldsRow, self.supplierParamsColumn + 1)
+
         self.updateTableMappingFields()
 
     def updateTableMappingFields(self):
@@ -59,6 +64,8 @@ class ParameterMappingGroupBox(QGroupBox):
             supplierLineEdit.deleteLater()
         lineEdits.clear()
 
+        self.mainGridLayout.takeAt(self.mainGridLayout.indexOf(self.saveButton))
+
         for columnName in self.tableColumnsList[self.tableListComboBox.currentIndex()]:
             dbLineEdit = QLineEdit(columnName)
             dbLineEdit.setReadOnly(True)
@@ -67,6 +74,9 @@ class ParameterMappingGroupBox(QGroupBox):
 
             supplierLineEdit = QLineEdit()
             supplierLineEdit.setText(columnName)  # TODO: load json and change if exists
+            supplierLineEdit.textChanged.connect(lambda: self.saveButton.setEnabled(True))
             lineEdits.append(supplierLineEdit)
             self.mainGridLayout.addWidget(supplierLineEdit, row, self.supplierParamsColumn, 1, 2)
             row += 1
+
+        self.mainGridLayout.addWidget(self.saveButton, row, self.supplierParamsColumn + 1)

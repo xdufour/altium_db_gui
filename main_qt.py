@@ -5,14 +5,16 @@ from PyQt5.QtCore import Qt, QFile, QTextStream, QSize
 from PyQt5.QtGui import QFont, QFontMetrics, QFontDatabase
 import sys
 import glob
+# noinspection PyUnresolvedReferences
 import breeze_resources
 import utils
 import json_appdata
 import mysql_query
 from mysql_query import MySqlEditQueryData
-import mysql
+import mysql.connector.errors as mysql_errors
 import altium_parser
 import dk_api
+from parameter_mapping import ParameterMappingGroupBox
 
 permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
                    "Library Ref", "Footprint Path", "Footprint Ref"]
@@ -49,8 +51,10 @@ class App:
 
         self.connected = False
         self.loginInfoDict = {}
+        self.dbTableList = []
         self.dbColumnNames = []
         self.cachedTableData = [[]]
+        self.dbParamsGroupBox = None
 
         self.loginInfoDict = {
             "address": "",
@@ -95,9 +99,12 @@ class App:
         self.settingsVLayout.addStretch(1)
 
         self.loginGroupBox = QGroupBox("MySQL Server Login")
-        self.loginGroupBox.setAlignment(Qt.AlignLeft)
 
-        self.settingsTopHLayout.addWidget(self.loginGroupBox, 0)
+        self.settingsTopLeftVLayout = QVBoxLayout()
+        self.settingsTopHLayout.addLayout(self.settingsTopLeftVLayout)
+        self.settingsTopLeftVLayout.addWidget(self.loginGroupBox, 0)
+        self.settingsTopLeftVLayout.addStretch(1)
+
         self.loginGridLayout = QGridLayout()
         self.loginGroupBox.setLayout(self.loginGridLayout)
         self.loginGridLayout.setColumnMinimumWidth(1, 50)
@@ -136,7 +143,7 @@ class App:
         self.searchPathHLayout = QHBoxLayout()
         self.settingsTopHLayout.addLayout(self.settingsTopRightVLayout, 1)
         self.settingsTopRightVLayout.addLayout(self.searchPathHLayout)
-        self.settingsTopRightVLayout.addStretch(1)
+
         self.searchPathLabel = QLabel("Library Search Path:")
         self.searchPathHLayout.addWidget(self.searchPathLabel, 0, Qt.AlignLeft)
         self.searchPathLineEdit = QLineEdit()
@@ -144,6 +151,8 @@ class App:
         self.searchPathButton = QPushButton("Browse")
         self.searchPathButton.released.connect(self.browseBtn)
         self.searchPathHLayout.addWidget(self.searchPathButton)
+
+        self.settingsTopRightVLayout.addStretch(1)
 
         # Home page widgets
         self.label1Column = 0
@@ -213,7 +222,7 @@ class App:
         self.tableWidget.verticalHeader().sectionClicked.connect(self.tableRowClicked)
         self.tableGroupBoxVLayout.addWidget(self.tableWidget)
 
-        self.tableLabel = QLabel("DB Table:")
+        self.tableLabel = QLabel("Database Table:")
         self.componentEditorGridLayout.addWidget(self.tableLabel, 0, self.label1Column)
         self.tableNameCombobox = QComboBox()
         self.tableNameCombobox.currentTextChanged.connect(self.loadGUI)
@@ -437,12 +446,13 @@ class App:
                     self.connected = True
                     print("Connected to database successfully")
                     self.loadDbTables()
+                    self.createParameterMappingUI()
                     self.dbTestButton.setDisabled(True)
                     self.dbTestButton.setText("Connected")
                     self.tabWidget.setTabEnabled(0, True)
-            except mysql.connector.errors.ProgrammingError:
+            except mysql_errors.ProgrammingError:
                 print("Access Denied")
-            except mysql.connector.errors.InterfaceError:
+            except mysql_errors.InterfaceError:
                 print("Invalid Login Information Format")
         if not self.connected:
             self.tabWidget.setTabEnabled(0, False)
@@ -456,9 +466,9 @@ class App:
             json_appdata.saveLibrarySearchPath(directory)
 
     def getLibSearchPath(self):
-        self.searchPathDict = json_appdata.loadLibrarySearchPath()
-        if 'filepath' in self.searchPathDict:
-            self.updateSearchPath(self.searchPathDict['filepath'])
+        searchPathDict = json_appdata.loadLibrarySearchPath()
+        if 'filepath' in searchPathDict:
+            self.updateSearchPath(searchPathDict['filepath'])
 
     def updateSearchPath(self, path):
         self.searchPathLineEdit.setText(path)
@@ -530,6 +540,21 @@ class App:
         print(f"Row {row} selected")
         self.duplicateButton.setEnabled(True)
         self.deleteButton.setEnabled(True)
+
+    def createParameterMappingUI(self):
+        tablesColumns = []
+        for table in self.dbTableList:
+            unfilteredColumns = mysql_query.getTableColumns(self.cnx, table)
+            filteredColumns = []
+            for col in unfilteredColumns:
+                if col not in permanentParams:
+                    filteredColumns.append(col)
+            print(filteredColumns)
+            tablesColumns.append(filteredColumns)
+        self.dbParamsGroupBox = ParameterMappingGroupBox(self.dbTableList, tablesColumns, ['Digi-Key'])
+        self.settingsTopRightVLayout.takeAt(1)
+        self.settingsTopRightVLayout.addWidget(self.dbParamsGroupBox)
+        self.settingsTopRightVLayout.addStretch(1)
 
 
 if __name__ == "__main__":

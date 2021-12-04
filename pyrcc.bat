@@ -1,1 +1,2 @@
-pyrcc5 assets/res.qrc -o resources.py
+mkdir build
+pyrcc5 assets/res.qrc -o build/resources.py

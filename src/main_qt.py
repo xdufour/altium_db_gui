@@ -6,7 +6,7 @@ from PyQt5.QtGui import QFont, QFontMetrics, QFontDatabase
 import sys
 import glob
 # noinspection PyUnresolvedReferences
-import resources
+import build.resources
 import utils
 from json_appdata import *
 import mysql_query
@@ -19,8 +19,8 @@ from parameter_mapping import ParameterMappingGroupBox
 permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
                    "Library Ref", "Footprint Path", "Footprint Ref"]
 
-mysql_login_filename = 'mysql_server_login.json'
-lib_search_path_filename = 'lib_search_path.json'
+mysql_login_filename = '../mysql_server_login.json'
+lib_search_path_filename = '../lib_search_path.json'
 
 labels = {}
 fields = {}
@@ -49,7 +49,7 @@ class App:
         app.setWindowIcon(appIcon)
 
         fontDb = QFontDatabase
-        fontId = fontDb.addApplicationFont('assets/font/Roboto-Regular.ttf')
+        fontId = fontDb.addApplicationFont('../assets/font/Roboto-Regular.ttf')
         if fontId < 0:
             print("Font not loaded")
         else:

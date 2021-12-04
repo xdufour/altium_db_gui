@@ -21,8 +21,6 @@ class ParameterMappingGroupBox(QGroupBox):
             for dbColumnName in tableColumnsList[i]:
                 self.paramsDicts[table][dbColumnName] = dbColumnName
 
-        print(self.paramsDicts)
-
         self.dbParamsColumn = 0
         self.equalsLabelColumn = 2
         self.supplierParamsColumn = 3

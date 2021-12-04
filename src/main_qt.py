@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem,\
+from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem, \
     QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget, QFileDialog, QDialog
 from PyQt5 import QtCore
 from PyQt5.QtCore import Qt, QFile, QTextStream, QSize
@@ -61,6 +61,8 @@ class App:
         createFolderIfNotExists(os.getenv('APPDATA') + '\\Altium DB GUI\\')
 
         self.connected = False
+        self.cnx = None
+
         self.loginInfoDict = {}
         self.dbTableList = []
         self.dbColumnNames = []
@@ -231,7 +233,8 @@ class App:
         self.componentEditorGridLayout.addWidget(self.tableLabel, 0, self.label1Column)
         self.tableNameCombobox = QComboBox()
         self.tableNameCombobox.currentTextChanged.connect(self.loadGUI)
-        self.componentEditorGridLayout.addWidget(self.tableNameCombobox, 0, self.lineEdit1Column, 1, self.lineEditColSpan)
+        self.componentEditorGridLayout.addWidget(self.tableNameCombobox, 0, self.lineEdit1Column, 1,
+                                                 self.lineEditColSpan)
 
         self.ceAddButton = QPushButton("Add new entry")
         self.ceAddButton.released.connect(self.addToDatabaseClicked)
@@ -253,7 +256,8 @@ class App:
         self.ceSupplierCombobox.addItem("Digi-Key")
         self.ceSupplierCombobox.setCurrentIndex(0)
         fields['supplier 1'] = self.ceSupplierCombobox
-        self.componentEditorGridLayout.addWidget(self.ceSupplierCombobox, 1, self.lineEdit2Column, 1, self.lineEditColSpan)
+        self.componentEditorGridLayout.addWidget(self.ceSupplierCombobox, 1, self.lineEdit2Column, 1,
+                                                 self.lineEditColSpan)
 
         self.ceSupplierPnLabel = QLabel("Supplier Part Number 1:")
         self.componentEditorGridLayout.addWidget(self.ceSupplierPnLabel, 2, self.label2Column)
@@ -481,10 +485,10 @@ class App:
         if 'filepath' in searchPathDict:
             self.updateSearchPath(searchPathDict['filepath'])
 
-    def updateSearchPath(self, path):
-        self.searchPathLineEdit.setText(path)
-        print(f"Library search path set: {path}")
-        self.updatePathComboboxes(path)
+    def updateSearchPath(self, filepath):
+        self.searchPathLineEdit.setText(filepath)
+        print(f"Library search path set: {filepath}")
+        self.updatePathComboboxes(filepath)
 
     def updatePathComboboxes(self, dirPath):
         schLibFiles = glob.glob(dirPath + '/**/*.SchLib', recursive=True)
@@ -558,7 +562,8 @@ class App:
             unfilteredColumns = mysql_query.getTableColumns(self.cnx, table)
             filteredColumns = []
             for col in unfilteredColumns:
-                if col not in permanentParams and col not in ['Description', 'Manufacturer', 'Manufacturer Part Number']:
+                if col not in permanentParams and \
+                        col not in ['Description', 'Manufacturer', 'Manufacturer Part Number']:
                     filteredColumns.append(col)
             tablesColumns.append(filteredColumns)
         self.dbParamsGroupBox = ParameterMappingGroupBox(self.dbTableList, tablesColumns, ['Digi-Key'])

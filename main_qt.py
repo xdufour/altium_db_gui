@@ -28,13 +28,19 @@ class App:
     def __init__(self):
         app = QApplication(sys.argv)
 
-        appIcon = utils.loadQIcon('assets/app.ico')
-        homeIcon = utils.loadQIcon('assets/home.png')
-        settingsIcon = utils.loadQIcon('assets/settings.png')
-        downloadIcon = utils.loadQIcon('assets/download_cloud.png')
-        applyIcon = utils.loadQIcon('assets/submit.png')
-        editIcon = utils.loadQIcon('assets/copy.png')
-        deleteIcon = utils.loadQIcon('assets/delete.png')
+        # set stylesheet
+        file = QFile(":/style/dark/stylesheet.qss")
+        file.open(QFile.ReadOnly | QFile.Text)
+        stream = QTextStream(file)
+        app.setStyleSheet(stream.readAll())
+
+        appIcon = utils.loadQIcon(':/ui/app.ico')
+        homeIcon = utils.loadQIcon(':/ui/home.png')
+        settingsIcon = utils.loadQIcon(':/ui/settings.png')
+        downloadIcon = utils.loadQIcon(':/ui/download_cloud.png')
+        applyIcon = utils.loadQIcon(':/ui/submit.png')
+        editIcon = utils.loadQIcon(':/ui/copy.png')
+        deleteIcon = utils.loadQIcon(':/ui/delete.png')
 
         app.setApplicationDisplayName("Altium DB GUI")
         app.setWindowIcon(appIcon)
@@ -62,12 +68,6 @@ class App:
             "password": "",
             "database": ""
         }
-
-        # set stylesheet
-        file = QFile(":/dark/stylesheet.qss")
-        file.open(QFile.ReadOnly | QFile.Text)
-        stream = QTextStream(file)
-        app.setStyleSheet(stream.readAll())
 
         self.mainLayout = QVBoxLayout()
         self.mainLayout.setContentsMargins(0, 0, 0, 0)

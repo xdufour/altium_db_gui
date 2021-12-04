@@ -39,3 +39,7 @@ def setLineEditValidationState(lineEdit, state):
     lineEdit.style().unpolish(lineEdit)
     lineEdit.style().unpolish(lineEdit)
     lineEdit.repaint()
+
+
+def assignToDict(_dict, key, value):
+    _dict[key] = value

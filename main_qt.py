@@ -8,7 +8,7 @@ import glob
 # noinspection PyUnresolvedReferences
 import breeze_resources
 import utils
-import json_appdata
+from json_appdata import *
 import mysql_query
 from mysql_query import MySqlEditQueryData
 import mysql.connector.errors as mysql_errors
@@ -18,6 +18,9 @@ from parameter_mapping import ParameterMappingGroupBox
 
 permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
                    "Library Ref", "Footprint Path", "Footprint Ref"]
+
+mysql_login_filename = 'mysql_server_login.json'
+lib_search_path_filename = 'lib_search_path.json'
 
 labels = {}
 fields = {}
@@ -62,12 +65,7 @@ class App:
         self.cachedTableData = [[]]
         self.dbParamsGroupBox = None
 
-        self.loginInfoDict = {
-            "address": "",
-            "user": "",
-            "password": "",
-            "database": ""
-        }
+        self.loginInfoDict = {}
 
         self.mainLayout = QVBoxLayout()
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
@@ -113,22 +111,26 @@ class App:
 
         self.dbAddressLabel = QLabel("Address:")
         self.dbAddressLineEdit = QLineEdit()
+        self.dbAddressLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'address', s))
         self.loginGridLayout.addWidget(self.dbAddressLabel, 0, 0)
         self.loginGridLayout.addWidget(self.dbAddressLineEdit, 0, 2)
 
         self.dbUserLabel = QLabel("User:")
         self.dbUserLineEdit = QLineEdit()
+        self.dbUserLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'user', s))
         self.loginGridLayout.addWidget(self.dbUserLabel, 1, 0)
         self.loginGridLayout.addWidget(self.dbUserLineEdit, 1, 2)
 
         self.dbPasswordLabel = QLabel("Password:")
         self.dbPasswordLineEdit = QLineEdit()
         self.dbPasswordLineEdit.setEchoMode(QLineEdit.PasswordEchoOnEdit)
+        self.dbPasswordLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'password', s))
         self.loginGridLayout.addWidget(self.dbPasswordLabel, 2, 0)
         self.loginGridLayout.addWidget(self.dbPasswordLineEdit, 2, 2)
 
         self.dbNameLabel = QLabel("Database:")
         self.dbNameLineEdit = QLineEdit()
+        self.dbNameLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'database', s))
         self.loginGridLayout.addWidget(self.dbNameLabel, 3, 0)
         self.loginGridLayout.addWidget(self.dbNameLineEdit, 3, 2)
 
@@ -306,7 +308,7 @@ class App:
 
         self.loadDbLogins()
         self.testDbConnection()
-        self.getLibSearchPath()
+        self.loadLibSearchPath()
 
         self.mainWindow.show()
         self.applyChangesButton.setMinimumWidth(self.ceSupplierPnButton.width())
@@ -428,20 +430,21 @@ class App:
         self.tableNameCombobox.addItems(self.dbTableList)
 
     def loadDbLogins(self):
-        self.loginInfoDict = json_appdata.loadDatabaseLoginInfo()
-        self.dbAddressLineEdit.insert(self.loginInfoDict['address'])
-        self.dbUserLineEdit.insert(self.loginInfoDict['user'])
-        self.dbPasswordLineEdit.insert(self.loginInfoDict['password'])
-        self.dbNameLineEdit.insert(self.loginInfoDict['database'])
+        self.loginInfoDict = loadFromJson(mysql_login_filename)
+        if 'address' in self.loginInfoDict:
+            self.dbAddressLineEdit.insert(self.loginInfoDict['address'])
+        if 'user' in self.loginInfoDict:
+            self.dbUserLineEdit.insert(self.loginInfoDict['user'])
+        if 'password' in self.loginInfoDict:
+            self.dbPasswordLineEdit.insert(self.loginInfoDict['password'])
+        if 'database' in self.loginInfoDict:
+            self.dbNameLineEdit.insert(self.loginInfoDict['database'])
 
     def saveDbLogins(self):
-        json_appdata.saveDatabaseLoginInfo(self.dbAddressLineEdit.text(),
-                                           self.dbUserLineEdit.text(),
-                                           self.dbPasswordLineEdit.text(),
-                                           self.dbNameLineEdit.text())
+        saveToJson(mysql_login_filename, self.loginInfoDict)
 
     def testDbConnection(self):
-        if not self.connected and not utils.dictHasEmptyValue(self.loginInfoDict):
+        if not self.connected and len(self.loginInfoDict) > 0 and not utils.dictHasEmptyValue(self.loginInfoDict):
             try:
                 self.cnx = mysql_query.init(self.dbUserLineEdit.text(),
                                             self.dbPasswordLineEdit.text(),
@@ -465,13 +468,14 @@ class App:
     def browseBtn(self):
         dialog = QFileDialog()
         dialog.setFileMode(QFileDialog.DirectoryOnly)
+        dirDict = {}
         if dialog.exec_() == QDialog.Accepted:
-            directory = dialog.selectedFiles()[0]
-            self.updateSearchPath(directory)
-            json_appdata.saveLibrarySearchPath(directory)
+            dirDict['filepath'] = dialog.selectedFiles()[0]
+            self.updateSearchPath(dirDict['filepath'])
+            saveToJson(lib_search_path_filename, dirDict)
 
-    def getLibSearchPath(self):
-        searchPathDict = json_appdata.loadLibrarySearchPath()
+    def loadLibSearchPath(self):
+        searchPathDict = loadFromJson(lib_search_path_filename)
         if 'filepath' in searchPathDict:
             self.updateSearchPath(searchPathDict['filepath'])
 

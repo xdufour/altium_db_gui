@@ -394,7 +394,8 @@ class App:
         dkpn = self.ceSupplierPnLineEdit.text()
         print(f"Querying Digi-Key for {dkpn}")
         result = dk_api.fetchDigikeyData(dkpn, self.tableNameCombobox.currentText(),
-                                         utils.strippedList(self.dbColumnNames, permanentParams))
+                                         utils.strippedList(self.dbColumnNames, permanentParams),
+                                         self.dbParamsGroupBox.getParamsDict())
         print(result)
         if len(result) == 0:
             utils.setLineEditValidationState(self.ceSupplierPnLineEdit, False)

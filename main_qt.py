@@ -6,7 +6,7 @@ from PyQt5.QtGui import QFont, QFontMetrics, QFontDatabase
 import sys
 import glob
 # noinspection PyUnresolvedReferences
-import breeze_resources
+import resources
 import utils
 from json_appdata import *
 import mysql_query

@@ -1,1 +1,1 @@
-pyrcc5 assets/res.qrc -o breeze_resources.py
+pyrcc5 assets/res.qrc -o resources.py

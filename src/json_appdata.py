@@ -1,24 +1,25 @@
 import json
+import os
 
-mysql_login_filename = 'mysql_server_login.json'
-lib_search_path_filename = 'lib_search_path.json'
+path = os.getenv('APPDATA')
+folder = '\\altium DB GUI\\json\\'
 
 
 def saveToJson(file, data):
     jsonObject = json.dumps(data, indent=4)
-    with open(file, "w") as outfile:
+    with open(path + folder + file, "w") as outfile:
         outfile.write(jsonObject)
-    print("File " + file + " written:")
+    print("File " + path + folder + file + " written:")
     print(data)
 
 
 def loadFromJson(file):
     jsonData = {}
     try:
-        with open(file, 'r') as openfile:
+        with open(path + folder + file, 'r') as openfile:
             jsonData = json.load(openfile)
-        print("Loaded data from file " + file + ":")
+        print("Loaded data from file " + path + folder + file + ":")
         print(jsonData)
     except FileNotFoundError:
-        print("File " + file + " not found")
+        print("File " + path + folder + file + " not found")
     return jsonData

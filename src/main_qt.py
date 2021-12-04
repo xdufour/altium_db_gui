@@ -19,8 +19,8 @@ from parameter_mapping import ParameterMappingGroupBox
 permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
                    "Library Ref", "Footprint Path", "Footprint Ref"]
 
-mysql_login_filename = '../mysql_server_login.json'
-lib_search_path_filename = '../lib_search_path.json'
+mysql_login_filename = 'mysql_server_login.json'
+lib_search_path_filename = 'lib_search_path.json'
 
 labels = {}
 fields = {}

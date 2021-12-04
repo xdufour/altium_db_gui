@@ -6,7 +6,7 @@ import utils
 labels = []
 lineEdits = {}
 
-jsonFile = '../supplier_parameter_mapping.json'
+jsonFile = 'supplier_parameter_mapping.json'
 
 
 class ParameterMappingGroupBox(QGroupBox):

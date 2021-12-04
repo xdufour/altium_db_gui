@@ -1,5 +1,6 @@
 import json
 import os
+from utils import createFolderIfNotExists
 
 path = os.getenv('APPDATA')
 folder = '\\altium DB GUI\\json\\'
@@ -7,6 +8,7 @@ folder = '\\altium DB GUI\\json\\'
 
 def saveToJson(file, data):
     jsonObject = json.dumps(data, indent=4)
+    createFolderIfNotExists(path + folder)
     with open(path + folder + file, "w") as outfile:
         outfile.write(jsonObject)
     print("File " + path + folder + file + " written:")

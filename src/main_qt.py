@@ -58,6 +58,8 @@ class App:
             print(f"Set application font: {self.fontfamily}")
             app.setFont(QFont(self.fontfamily, 10))
 
+        createFolderIfNotExists(os.getenv('APPDATA') + '\\Altium DB GUI\\')
+
         self.connected = False
         self.loginInfoDict = {}
         self.dbTableList = []

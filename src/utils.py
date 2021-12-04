@@ -1,4 +1,5 @@
 from PyQt5.QtGui import QIcon
+import os
 
 
 def loadQIcon(filepath):
@@ -43,3 +44,8 @@ def setLineEditValidationState(lineEdit, state):
 
 def assignToDict(_dict, key, value):
     _dict[key] = value
+
+
+def createFolderIfNotExists(folder):
+    if not os.path.exists(folder):
+        os.makedirs(folder)

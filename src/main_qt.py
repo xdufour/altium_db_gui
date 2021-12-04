@@ -442,7 +442,7 @@ class App:
             print(f"Querying {supplier2} for {mfgPN}")
             if supplier2 == "Mouser":
                 executor = Executor(fetchMouserSupplierPN, mfgPN)
-                executor.signals.strResultAvailable.connect(lambda s: self.ceSupplierPn2LineEdit.setText(s))
+                executor.signals.resultAvailable.connect(lambda s: self.ceSupplierPn2LineEdit.setText(s))
                 self.threadPool.start(executor)
             elif supplier2 == "Digi-Key":
                 alternateSupplierPN = fetchDigikeySupplierPN(mfgPN)

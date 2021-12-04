@@ -3,7 +3,7 @@ from PyQt5.QtCore import QRunnable, QObject
 
 
 class Signals(QObject):
-    strResultAvailable = QtCore.pyqtSignal(str)
+    resultAvailable = QtCore.pyqtSignal(object)
 
 
 class Executor(QRunnable):
@@ -16,4 +16,4 @@ class Executor(QRunnable):
     def run(self):
         res = self.fn(*self.args)
         if type(res) == str:
-            self.signals.strResultAvailable.emit(res)
+            self.signals.resultAvailable.emit(res)

@@ -1275,22 +1275,19 @@ QTabBar::tab:left:!selected
     border-bottom-right-radius: 0em;
 }
 
-QTabBar::tab:left:previous-selected
+QTabBar::tab:left:previous-selected,
+QTabBar::tab:left:previous-selected:!selected:hover
 {
-    border-top: 0.04em transparent #2c3034;
-    border-top-right-radius: 0em;
-    border-bottom-right-radius: 0em;
+    border-top-right-radius: 20px;
+}
+
+QTabBar::tab:left:next-selected,
+QTabBar::tab:left:next-selected:!selected:hover
+{
+    border-bottom-right-radius: 20px;
 }
 
 QTabBar::tab:left:!selected:hover
-{
-    background-color: rgba(61, 173, 232, 0.1);
-    border-radius: 0.09em;
-    border-top-right-radius: 0em;
-    border-bottom-right-radius: 0em;
-}
-
-QTabBar::tab:left:!selected:first:hover
 {
     background-color: rgba(61, 173, 232, 0.1);
     border-radius: 0.09em;

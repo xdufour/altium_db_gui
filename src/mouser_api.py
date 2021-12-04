@@ -18,23 +18,6 @@ def get_api_keys(filename=None):
         os.environ.get('MOUSER_ORDER_API_KEY', ''),
         os.environ.get('MOUSER_PART_API_KEY', ''),
     ]
-
-    # Else look into configuration file
-    if not (api_keys[0] or api_keys[1]) and filename:
-        try:
-            with open(filename, 'r') as keys_in_file:
-                api_keys = []
-
-                for key in keys_in_file:
-                    api_keys.append(key.replace('\n', ''))
-
-                if len(api_keys) == 2:
-                    return api_keys
-                else:
-                    pass
-        except FileNotFoundError:
-            print(f'[ERROR]\tAPI Keys File "{filename}" Not Found')
-
     return api_keys
 
 
@@ -140,86 +123,6 @@ class MouserBaseRequest(MouserAPIRequest):
                 csvwriter.writerow(row)
 
 
-class MouserCartRequest(MouserBaseRequest):
-    """ Mouser Cart Request """
-
-    name = 'Cart'
-    operations = {
-        'get': ('', ''),
-        'update': ('', ''),
-        'insertitem': ('', ''),
-        'updateitem': ('', ''),
-        'removeitem': ('', ''),
-    }
-
-
-class MouserOrderHistoryRequest(MouserBaseRequest):
-    """ Mouser Order History Request """
-
-    name = 'Order History'
-    operations = {
-        'ByDateFilter': ('', ''),
-        'ByDateRange': ('', ''),
-    }
-
-
-class MouserOrderRequest(MouserBaseRequest):
-    """ Mouser Order Request """
-
-    name = 'Order'
-    operations = {
-        'get': ('GET', '/order'),
-        'create': ('', ''),
-        'submit': ('', ''),
-        'options': ('', ''),
-        'currencies': ('', ''),
-        'countries': ('', ''),
-    }
-
-    def export_order_lines_to_csv(self, order_number='', clean=False):
-        ''' Export Order Lines to CSV '''
-
-        def convert_order_lines_to_list(clean=False):
-
-            if clean:
-                # Exclude following columns
-                exclude_col = [
-                    'Errors',
-                    'MouserATS',
-                    'PartsPerReel',
-                    'ScheduledReleases',
-                    'InfoMessages',
-                    'CartItemCustPartNumber',
-                    'LifeCycle',
-                    'SalesMultipleQty',
-                    'SalesMinimumOrderQty',
-                    'SalesMaximumOrderQty',
-                ]
-            else:
-                exclude_col = []
-
-            response_data = self.get_response()
-            data_list = []
-            if 'OrderLines' in response_data:
-                order_lines = response_data['OrderLines']
-
-                headers = [key for key in order_lines[0] if key not in exclude_col]
-                data_list.append(headers)
-
-                for order_line in order_lines:
-                    line = [value for key, value in order_line.items() if key not in exclude_col]
-                    data_list.append(line)
-
-                return data_list
-
-        data_to_export = convert_order_lines_to_list(clean)
-        filename = '_'.join([self.name, order_number]) + '.csv'
-        # Export to CSV file
-        self.export_csv(filename, data_to_export)
-
-        return filename
-
-
 class MouserPartSearchRequest(MouserBaseRequest):
     """ Mouser Part Search Request """
 
@@ -312,18 +215,3 @@ def fetchMouserSupplierPN(manufacturerPartNumber):
     except KeyError:
         print(f"No Mouser Part Number found for {manufacturerPartNumber}")
     return supplierPN
-
-
-class MouserSupplierPnExecutorSignals(QObject):
-    resultAvailable = QtCore.pyqtSignal(str)
-
-
-class MouserSupplierPnExecutor(QRunnable):
-    def __init__(self, manufacturerPartNumber):
-        super(MouserSupplierPnExecutor, self).__init__()
-        self.mfgPN = manufacturerPartNumber
-        self.signals = MouserSupplierPnExecutorSignals()
-
-    def run(self):
-        supplierPN = fetchMouserSupplierPN(self.mfgPN)
-        self.signals.resultAvailable.emit(supplierPN)

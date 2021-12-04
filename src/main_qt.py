@@ -14,8 +14,9 @@ from mysql_query import MySqlEditQueryData
 import mysql.connector.errors as mysql_errors
 import altium_parser
 from dk_api import fetchDigikeyData, fetchDigikeySupplierPN
-from mouser_api import fetchMouserSupplierPN, MouserSupplierPnExecutor
+from mouser_api import fetchMouserSupplierPN
 from parameter_mapping import ParameterMappingGroupBox
+from executor import Executor
 
 permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
                    "Library Ref", "Footprint Path", "Footprint Ref"]
@@ -440,8 +441,8 @@ class App:
             supplier2 = self.ceSupplier2Combobox.currentText()
             print(f"Querying {supplier2} for {mfgPN}")
             if supplier2 == "Mouser":
-                executor = MouserSupplierPnExecutor(mfgPN)
-                executor.signals.resultAvailable.connect(lambda s: self.ceSupplierPn2LineEdit.setText(s))
+                executor = Executor(fetchMouserSupplierPN, mfgPN)
+                executor.signals.strResultAvailable.connect(lambda s: self.ceSupplierPn2LineEdit.setText(s))
                 self.threadPool.start(executor)
             elif supplier2 == "Digi-Key":
                 alternateSupplierPN = fetchDigikeySupplierPN(mfgPN)

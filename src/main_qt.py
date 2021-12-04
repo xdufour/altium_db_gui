@@ -14,6 +14,7 @@ from mysql_query import MySqlEditQueryData
 import mysql.connector.errors as mysql_errors
 import altium_parser
 import dk_api
+from mouser_api import fetchSupplierPN
 from parameter_mapping import ParameterMappingGroupBox
 
 permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
@@ -116,12 +117,14 @@ class App:
         self.dbAddressLabel = QLabel("Address:")
         self.dbAddressLineEdit = QLineEdit()
         self.dbAddressLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'address', s))
+        self.dbAddressLineEdit.textEdited.connect(lambda: self.dbLoginSaveButton.setEnabled(True))
         self.loginGridLayout.addWidget(self.dbAddressLabel, 0, 0)
         self.loginGridLayout.addWidget(self.dbAddressLineEdit, 0, 2)
 
         self.dbUserLabel = QLabel("User:")
         self.dbUserLineEdit = QLineEdit()
         self.dbUserLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'user', s))
+        self.dbUserLineEdit.textEdited.connect(lambda: self.dbLoginSaveButton.setEnabled(True))
         self.loginGridLayout.addWidget(self.dbUserLabel, 1, 0)
         self.loginGridLayout.addWidget(self.dbUserLineEdit, 1, 2)
 
@@ -129,12 +132,14 @@ class App:
         self.dbPasswordLineEdit = QLineEdit()
         self.dbPasswordLineEdit.setEchoMode(QLineEdit.PasswordEchoOnEdit)
         self.dbPasswordLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'password', s))
+        self.dbPasswordLineEdit.textEdited.connect(lambda: self.dbLoginSaveButton.setEnabled(True))
         self.loginGridLayout.addWidget(self.dbPasswordLabel, 2, 0)
         self.loginGridLayout.addWidget(self.dbPasswordLineEdit, 2, 2)
 
         self.dbNameLabel = QLabel("Database:")
         self.dbNameLineEdit = QLineEdit()
         self.dbNameLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'database', s))
+        self.dbNameLineEdit.textEdited.connect(lambda: self.dbLoginSaveButton.setEnabled(True))
         self.loginGridLayout.addWidget(self.dbNameLabel, 3, 0)
         self.loginGridLayout.addWidget(self.dbNameLineEdit, 3, 2)
 
@@ -142,9 +147,11 @@ class App:
         self.loginGridLayout.addWidget(self.dbTestButton, 4, 0, 1, 2)
         self.dbTestButton.released.connect(self.testDbConnection)
 
-        self.dbSaveButton = QPushButton("Save")
-        self.loginGridLayout.addWidget(self.dbSaveButton, 4, 2)
-        self.dbSaveButton.released.connect(self.saveDbLogins)
+        self.dbLoginSaveButton = QPushButton("Save")
+        self.dbLoginSaveButton.setEnabled(False)
+        self.dbLoginSaveButton.setProperty('accent', True)
+        self.loginGridLayout.addWidget(self.dbLoginSaveButton, 4, 2)
+        self.dbLoginSaveButton.released.connect(self.saveDbLogins)
 
         self.settingsTopRightVLayout = QVBoxLayout()
         self.searchPathHLayout = QHBoxLayout()
@@ -176,8 +183,8 @@ class App:
         self.homeVLayout.addLayout(self.hometopHLayout)
 
         self.componentEditorGroupBox = QGroupBox("Component Editor")
-        self.componentEditorGridLayout = QGridLayout()
-        self.componentEditorGroupBox.setLayout(self.componentEditorGridLayout)
+        self.ceGridLayout = QGridLayout()
+        self.componentEditorGroupBox.setLayout(self.ceGridLayout)
         self.hometopHLayout.addWidget(self.componentEditorGroupBox)
 
         self.tableGroupBox = QGroupBox("Table View")
@@ -230,87 +237,100 @@ class App:
         self.tableGroupBoxVLayout.addWidget(self.tableWidget)
 
         self.tableLabel = QLabel("Database Table:")
-        self.componentEditorGridLayout.addWidget(self.tableLabel, 0, self.label1Column)
+        self.ceGridLayout.addWidget(self.tableLabel, 0, self.label1Column)
         self.tableNameCombobox = QComboBox()
         self.tableNameCombobox.currentTextChanged.connect(self.loadGUI)
-        self.componentEditorGridLayout.addWidget(self.tableNameCombobox, 0, self.lineEdit1Column, 1,
-                                                 self.lineEditColSpan)
+        self.ceGridLayout.addWidget(self.tableNameCombobox, 0, self.lineEdit1Column, 1,
+                                    self.lineEditColSpan)
 
-        self.ceAddButton = QPushButton("Add new entry")
+        self.ceAddButton = QPushButton("Add component")
         self.ceAddButton.released.connect(self.addToDatabaseClicked)
         self.ceAddButton.setEnabled(False)
         self.ceAddButton.setProperty("accent", True)
         self.ceAddButton.setStyleSheet("QPushButton#AccentButton { background-color: 51b7eb;}")
-        self.componentEditorGridLayout.addWidget(self.ceAddButton, 7, self.lineEdit2Column, 1, self.lineEditColSpan)
+        self.ceGridLayout.addWidget(self.ceAddButton, 0, self.lineEdit2Column, 1, self.lineEditColSpan)
 
         self.ceNameLabel = QLabel("Name:")
-        self.componentEditorGridLayout.addWidget(self.ceNameLabel, 1, self.label1Column)
+        self.ceGridLayout.addWidget(self.ceNameLabel, 1, self.label1Column)
         self.ceNameLineEdit = QLineEdit()
         self.ceNameLineEdit.textChanged.connect(self.validateName)
         fields['name'] = self.ceNameLineEdit
-        self.componentEditorGridLayout.addWidget(self.ceNameLineEdit, 1, self.lineEdit1Column, 1, self.lineEditColSpan)
+        self.ceGridLayout.addWidget(self.ceNameLineEdit, 1, self.lineEdit1Column, 1, self.lineEditColSpan)
 
-        self.ceSupplierLabel = QLabel("Supplier 1:")
-        self.componentEditorGridLayout.addWidget(self.ceSupplierLabel, 1, self.label2Column)
-        self.ceSupplierCombobox = QComboBox()
-        self.ceSupplierCombobox.addItem("Digi-Key")
-        self.ceSupplierCombobox.setCurrentIndex(0)
-        fields['supplier 1'] = self.ceSupplierCombobox
-        self.componentEditorGridLayout.addWidget(self.ceSupplierCombobox, 1, self.lineEdit2Column, 1,
-                                                 self.lineEditColSpan)
+        self.ceSupplier1Label = QLabel("Supplier 1:")
+        self.ceGridLayout.addWidget(self.ceSupplier1Label, 1, self.label2Column)
+        self.ceSupplier1Combobox = QComboBox()
+        self.ceSupplier1Combobox.addItem("Digi-Key")
+        self.ceSupplier1Combobox.setCurrentIndex(0)
+        fields['supplier 1'] = self.ceSupplier1Combobox
+        self.ceGridLayout.addWidget(self.ceSupplier1Combobox, 1, self.lineEdit2Column, 1, self.lineEditColSpan)
 
-        self.ceSupplierPnLabel = QLabel("Supplier Part Number 1:")
-        self.componentEditorGridLayout.addWidget(self.ceSupplierPnLabel, 2, self.label2Column)
-        self.ceSupplierPnLineEdit = QLineEdit()
-        self.ceSupplierPnLineEdit.returnPressed.connect(self.querySupplier)
-        self.ceSupplierPnLineEdit.textChanged.connect(
-            lambda: utils.setLineEditValidationState(self.ceSupplierPnLineEdit, None))
-        fields['supplier part number 1'] = self.ceSupplierPnLineEdit
-        self.componentEditorGridLayout.addWidget(self.ceSupplierPnLineEdit, 2, self.lineEdit2Column)
+        self.ceSupplierPn1Label = QLabel("Supplier Part Number 1:")
+        self.ceGridLayout.addWidget(self.ceSupplierPn1Label, 2, self.label2Column)
+        self.ceSupplierPn1LineEdit = QLineEdit()
+        self.ceSupplierPn1LineEdit.returnPressed.connect(self.querySupplier)
+        self.ceSupplierPn1LineEdit.textChanged.connect(
+            lambda: utils.setLineEditValidationState(self.ceSupplierPn1LineEdit, None))
+        fields['supplier part number 1'] = self.ceSupplierPn1LineEdit
+        self.ceGridLayout.addWidget(self.ceSupplierPn1LineEdit, 2, self.lineEdit2Column)
 
         self.ceSupplierPnButton = QPushButton()
         self.ceSupplierPnButton.setIcon(downloadIcon)
         self.ceSupplierPnButton.setIconSize(QSize(48, 30))
         self.ceSupplierPnButton.setToolTip("Query supplier for part number")
         self.ceSupplierPnButton.released.connect(self.querySupplier)
-        self.componentEditorGridLayout.addWidget(self.ceSupplierPnButton, 2, self.lineEdit2Column + 1)
+        self.ceGridLayout.addWidget(self.ceSupplierPnButton, 2, self.lineEdit2Column + 1)
+
+        self.ceSupplier2Label = QLabel("Supplier 2:")
+        self.ceGridLayout.addWidget(self.ceSupplier2Label, 3, self.label2Column)
+        self.ceSupplier2Combobox = QComboBox()
+        self.ceSupplier2Combobox.addItems(['Mouser'])
+        self.ceSupplier2Combobox.setCurrentIndex(0)
+        fields['supplier 2'] = self.ceSupplier2Combobox
+        self.ceGridLayout.addWidget(self.ceSupplier2Combobox, 3, self.lineEdit2Column, 1, self.lineEditColSpan)
+
+        self.ceSupplierPn2Label = QLabel("Supplier Part Number 2:")
+        self.ceGridLayout.addWidget(self.ceSupplierPn2Label, 4, self.label2Column)
+        self.ceSupplierPn2LineEdit = QLineEdit()
+        fields['supplier part number 2'] = self.ceSupplierPn2LineEdit
+        self.ceGridLayout.addWidget(self.ceSupplierPn2LineEdit, 4, self.lineEdit2Column, 1, self.lineEditColSpan)
 
         self.ceLibraryPathLabel = QLabel("Library Path" + ":")
-        self.componentEditorGridLayout.addWidget(self.ceLibraryPathLabel, 3, self.label2Column)
+        self.ceGridLayout.addWidget(self.ceLibraryPathLabel, 5, self.label2Column)
         self.ceLibraryPathCombobox = QComboBox()
         self.ceLibraryPathCombobox.currentTextChanged.connect(self.updateLibraryRefCombobox)
         fields['library path'] = self.ceLibraryPathCombobox
-        self.componentEditorGridLayout.addWidget(self.ceLibraryPathCombobox, 3, self.lineEdit2Column, 1,
-                                                 self.lineEditColSpan)
+        self.ceGridLayout.addWidget(self.ceLibraryPathCombobox, 5, self.lineEdit2Column, 1,
+                                    self.lineEditColSpan)
 
         self.ceLibraryRefLabel = QLabel("Library Ref" + ":")
-        self.componentEditorGridLayout.addWidget(self.ceLibraryRefLabel, 4, self.label2Column)
+        self.ceGridLayout.addWidget(self.ceLibraryRefLabel, 6, self.label2Column)
         self.ceLibraryRefCombobox = QComboBox()
         fields['library ref'] = self.ceLibraryRefCombobox
-        self.componentEditorGridLayout.addWidget(self.ceLibraryRefCombobox, 4, self.lineEdit2Column, 1,
-                                                 self.lineEditColSpan)
+        self.ceGridLayout.addWidget(self.ceLibraryRefCombobox, 6, self.lineEdit2Column, 1,
+                                    self.lineEditColSpan)
 
         self.ceFootprintPathLabel = QLabel("Footprint Path" + ":")
-        self.componentEditorGridLayout.addWidget(self.ceFootprintPathLabel, 5, self.label2Column)
+        self.ceGridLayout.addWidget(self.ceFootprintPathLabel, 7, self.label2Column)
         self.ceFootprintPathCombobox = QComboBox()
         self.ceFootprintPathCombobox.currentTextChanged.connect(self.updateFootprintRefCombobox)
         fields['footprint path'] = self.ceFootprintPathCombobox
-        self.componentEditorGridLayout.addWidget(self.ceFootprintPathCombobox, 5, self.lineEdit2Column, 1,
-                                                 self.lineEditColSpan)
+        self.ceGridLayout.addWidget(self.ceFootprintPathCombobox, 7, self.lineEdit2Column, 1,
+                                    self.lineEditColSpan)
 
         self.ceFootprintRefLabel = QLabel("Footprint Ref" + ":")
-        self.componentEditorGridLayout.addWidget(self.ceFootprintRefLabel, 6, self.label2Column)
+        self.ceGridLayout.addWidget(self.ceFootprintRefLabel, 8, self.label2Column)
         self.ceFootprintRefCombobox = QComboBox()
         fields['footprint ref'] = self.ceFootprintRefCombobox
-        self.componentEditorGridLayout.addWidget(self.ceFootprintRefCombobox, 6, self.lineEdit2Column, 1,
-                                                 self.lineEditColSpan)
+        self.ceGridLayout.addWidget(self.ceFootprintRefCombobox, 8, self.lineEdit2Column, 1,
+                                    self.lineEditColSpan)
 
-        self.componentEditorGridLayout.setSpacing(20)
-        self.componentEditorGridLayout.setColumnMinimumWidth(self.spacingColumn, 50)
-        self.componentEditorGridLayout.setColumnStretch(self.lineEdit1Column, 1)
-        self.componentEditorGridLayout.setColumnStretch(self.lineEdit2Column, 1)
-        self.componentEditorGridLayout.setColumnMinimumWidth(self.lineEdit2Column + 1, 80)
-        self.componentEditorGridLayout.setColumnMinimumWidth(self.lineEdit1Column + 1, 80)
+        self.ceGridLayout.setSpacing(20)
+        self.ceGridLayout.setColumnMinimumWidth(self.spacingColumn, 50)
+        self.ceGridLayout.setColumnStretch(self.lineEdit1Column, 1)
+        self.ceGridLayout.setColumnStretch(self.lineEdit2Column, 1)
+        self.ceGridLayout.setColumnMinimumWidth(self.lineEdit2Column + 1, 80)
+        self.ceGridLayout.setColumnMinimumWidth(self.lineEdit1Column + 1, 80)
 
         self.loadDbLogins()
         self.testDbConnection()
@@ -343,6 +363,7 @@ class App:
                     del fields[nameLower]
         self.dbColumnNames.clear()
         self.dbColumnNames = mysql_query.getTableColumns(self.cnx, self.tableNameCombobox.currentText())
+
         # Create widgets
         for column in self.dbColumnNames:
             if column not in permanentParams:
@@ -352,10 +373,11 @@ class App:
                 labels[nameLower] = label
                 lineEdit = QLineEdit()
                 fields[nameLower] = lineEdit
-                self.componentEditorGridLayout.addWidget(label, row, self.label1Column)
-                self.componentEditorGridLayout.addWidget(lineEdit, row, self.lineEdit1Column, 1, self.lineEditColSpan)
+                self.ceGridLayout.addWidget(label, row, self.label1Column)
+                self.ceGridLayout.addWidget(lineEdit, row, self.lineEdit1Column, 1, self.lineEditColSpan)
                 row += 1
-        self.ceSupplierPnLineEdit.clear()
+        self.ceSupplierPn1LineEdit.clear()
+        self.ceSupplierPn2LineEdit.clear()
         self.ceNameLineEdit.clear()
 
     def updateTableViewFrame(self):
@@ -391,22 +413,32 @@ class App:
             self.tableWidget.setColumnWidth(i, max([min(headerWidth, maxColumnWidth), min(dataWidth, maxColumnWidth)]))
 
     def querySupplier(self):
-        dkpn = self.ceSupplierPnLineEdit.text()
-        print(f"Querying Digi-Key for {dkpn}")
+        dkpn = self.ceSupplierPn1LineEdit.text()
+        print(f"Querying " + self.ceSupplier1Combobox.currentText() + "for {dkpn}")
         result = dk_api.fetchDigikeyData(dkpn, self.tableNameCombobox.currentText(),
                                          utils.strippedList(self.dbColumnNames, permanentParams),
                                          self.dbParamsGroupBox.getParamsDict())
         print(result)
         if len(result) == 0:
-            utils.setLineEditValidationState(self.ceSupplierPnLineEdit, False)
+            utils.setLineEditValidationState(self.ceSupplierPn1LineEdit, False)
         else:
-            utils.setLineEditValidationState(self.ceSupplierPnLineEdit, True)
+            utils.setLineEditValidationState(self.ceSupplierPn1LineEdit, True)
         for columnName, value in result:
             try:
                 fields[columnName.lower()].setText(value)
                 fields[columnName.lower()].setCursorPosition(0)
             except KeyError:
                 print(f"Error: no field found for \'{columnName.lower()}\'")
+        self.queryAlternateSupplier()
+
+    def queryAlternateSupplier(self):
+        if self.ceSupplier2Combobox.currentText() == "Mouser":
+            mfgPN = fields['manufacturer part number'].text()
+            if len(mfgPN) > 0:
+                print(f"Querying Mouser for {mfgPN}")
+                alternateSupplierPN = fetchSupplierPN(mfgPN)
+                self.ceSupplierPn2LineEdit.setText(alternateSupplierPN)
+                print(f"Mouser Part Number: {alternateSupplierPN}")
 
     def addToDatabaseClicked(self):
         rowData = []
@@ -446,9 +478,11 @@ class App:
             self.dbPasswordLineEdit.insert(self.loginInfoDict['password'])
         if 'database' in self.loginInfoDict:
             self.dbNameLineEdit.insert(self.loginInfoDict['database'])
+        self.dbLoginSaveButton.setEnabled(False)
 
     def saveDbLogins(self):
         saveToJson(mysql_login_filename, self.loginInfoDict)
+        self.dbLoginSaveButton.setEnabled(False)
 
     def testDbConnection(self):
         if not self.connected and len(self.loginInfoDict) > 0 and not utils.dictHasEmptyValue(self.loginInfoDict):

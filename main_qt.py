@@ -558,7 +558,6 @@ class App:
             for col in unfilteredColumns:
                 if col not in permanentParams and col not in ['Description', 'Manufacturer', 'Manufacturer Part Number']:
                     filteredColumns.append(col)
-            print(filteredColumns)
             tablesColumns.append(filteredColumns)
         self.dbParamsGroupBox = ParameterMappingGroupBox(self.dbTableList, tablesColumns, ['Digi-Key'])
         self.settingsTopRightVLayout.takeAt(1)

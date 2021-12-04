@@ -1,11 +1,10 @@
 import os
 import digikey
-from urllib.error import HTTPError
 
 os.environ['DIGIKEY_CLIENT_ID'] = 'il5UCEPjQRedAgJ6ssO3VJrL3dU65gh0'
 os.environ['DIGIKEY_CLIENT_SECRET'] = 'kcXe6QYpoFQmfZUZ'
 os.environ['DIGIKEY_CLIENT_SANDBOX'] = 'False'
-os.environ['DIGIKEY_STORAGE_PATH'] = 'C:\cache_dir'
+os.environ['DIGIKEY_STORAGE_PATH'] = 'C:/cache_dir'
 
 capacitor_dict = {
     "Capacitance": "Capacitance",

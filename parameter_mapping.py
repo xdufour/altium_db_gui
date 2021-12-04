@@ -1,10 +1,12 @@
 from PyQt5.QtWidgets import QWidget, QLabel, QLineEdit, QComboBox, QGroupBox, QPushButton, QGridLayout
 from PyQt5.QtCore import Qt
-import json_appdata
-import mysql_query
+from json_appdata import *
+import utils
 
 labels = []
-lineEdits = []
+lineEdits = {}
+
+jsonFile = 'supplier_parameter_mapping.json'
 
 
 class ParameterMappingGroupBox(QGroupBox):
@@ -12,6 +14,14 @@ class ParameterMappingGroupBox(QGroupBox):
         super().__init__("Parameter mapping")
 
         self.tableColumnsList = tableColumnsList
+        self.paramsDicts = {}
+
+        for i, table in enumerate(tableList):
+            self.paramsDicts[table] = {}
+            for dbColumnName in tableColumnsList[i]:
+                self.paramsDicts[table][dbColumnName] = dbColumnName
+
+        print(self.paramsDicts)
 
         self.dbParamsColumn = 0
         self.equalsLabelColumn = 2
@@ -31,6 +41,7 @@ class ParameterMappingGroupBox(QGroupBox):
         self.tableListComboBox.addItems(tableList)
         self.tableListComboBox.setCurrentIndex(0)
         self.tableListComboBox.currentTextChanged.connect(self.updateTableMappingFields)
+        self.tableListComboBox.currentTextChanged.connect(lambda: self.saveButton.setEnabled(False))
         self.mainGridLayout.addWidget(self.tableListComboBox, self.comboBoxRow, self.dbParamsColumn + 1)
 
         self.supplierTableLabel = QLabel("Supplier:")
@@ -50,6 +61,8 @@ class ParameterMappingGroupBox(QGroupBox):
 
         self.saveButton = QPushButton("Save")
         self.saveButton.setEnabled(False)
+        self.saveButton.setProperty('accent', True)
+        self.saveButton.released.connect(self.saveCmd)
         self.mainGridLayout.addWidget(self.saveButton, self.fieldsRow, self.supplierParamsColumn + 1)
 
         self.updateTableMappingFields()
@@ -60,23 +73,35 @@ class ParameterMappingGroupBox(QGroupBox):
         for label in labels:
             label.deleteLater()
         labels.clear()
-        for supplierLineEdit in lineEdits:
-            supplierLineEdit.deleteLater()
+        for k in lineEdits:
+            lineEdits[k].deleteLater()
         lineEdits.clear()
+
+        self.paramsDicts = loadFromJson(jsonFile)
 
         self.mainGridLayout.takeAt(self.mainGridLayout.indexOf(self.saveButton))
 
         for columnName in self.tableColumnsList[self.tableListComboBox.currentIndex()]:
             dbLineEdit = QLineEdit(columnName)
             dbLineEdit.setReadOnly(True)
-            lineEdits.append(dbLineEdit)
+            lineEdits[columnName] = dbLineEdit
             self.mainGridLayout.addWidget(dbLineEdit, row, self.dbParamsColumn, 1, 2)
 
             supplierLineEdit = QLineEdit()
-            supplierLineEdit.setText(columnName)  # TODO: load json and change if exists
+            supplierLineEdit.setText(self.paramsDicts[self.tableListComboBox.currentText()][columnName])
             supplierLineEdit.textChanged.connect(lambda: self.saveButton.setEnabled(True))
-            lineEdits.append(supplierLineEdit)
+            supplierLineEdit.textChanged.connect(lambda s, t=self.tableListComboBox.currentText(), c=columnName:
+                                                 utils.assignToDict(self.paramsDicts[t], lineEdits[c].text(), s))
+            lineEdits[columnName + "_s"] = supplierLineEdit
             self.mainGridLayout.addWidget(supplierLineEdit, row, self.supplierParamsColumn, 1, 2)
+
             row += 1
 
         self.mainGridLayout.addWidget(self.saveButton, row, self.supplierParamsColumn + 1)
+
+    def saveCmd(self):
+        saveToJson(jsonFile, self.paramsDicts)
+        self.saveButton.setEnabled(False)
+
+    def getParamsDict(self):
+        return self.paramsDicts

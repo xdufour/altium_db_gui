@@ -8,12 +8,12 @@ os.environ['DIGIKEY_STORAGE_PATH'] = 'C:/cache_dir'
 
 
 # Query product number
-def fetchDigikeyData(dkpn, tableName, dbColumnList, paramDicts):
+def fetchDigikeyData(digikeyPartNumber, requestedParams, paramDict):
     try:
-        part = digikey.product_details(dkpn)
+        part = digikey.product_details(digikeyPartNumber)
         result = []
         dkDataDict = {}
-        paramDict = dict((v, k) for k, v in paramDicts[tableName].items())
+        paramDict = dict((v, k) for k, v in paramDict.items())
 
         for p in part.parameters:
             p_dict = p.to_dict()
@@ -21,7 +21,7 @@ def fetchDigikeyData(dkpn, tableName, dbColumnList, paramDicts):
             if param in paramDict:
                 dkDataDict[paramDict[param]] = value
 
-        for column in dbColumnList:
+        for column in requestedParams:
             if column == "Description":
                 value = part.detailed_description
             elif column == "Manufacturer Part Number":
@@ -39,6 +39,15 @@ def fetchDigikeyData(dkpn, tableName, dbColumnList, paramDicts):
             result.append([column, value])
         return result
     except AttributeError:
-        print("Digi-Key API Request Failed: No Results")
+        print("Digi-Key Supplier Part Number API Request Failed")
     return []
 
+
+def fetchDigikeySupplierPN(manufacturerPartNumber):
+    supplierPN = ""
+    try:
+        part = digikey.product_details(manufacturerPartNumber)
+        supplierPN = part.digi_key_part_number
+    except AttributeError:
+        print("Digi-Key Manufacturer Part Number API Request Failed")
+    return supplierPN

@@ -299,7 +299,7 @@ class MouserPartSearchRequest(MouserBaseRequest):
             return False
 
 
-def fetchSupplierPN(manufacturerPartNumber):
+def fetchMouserSupplierPN(manufacturerPartNumber):
     mouserRequest = MouserPartSearchRequest('partnumber')
     mouserRequest.part_search(manufacturerPartNumber)
     res = mouserRequest.get_clean_response()

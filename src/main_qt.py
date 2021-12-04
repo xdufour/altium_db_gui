@@ -13,8 +13,8 @@ import mysql_query
 from mysql_query import MySqlEditQueryData
 import mysql.connector.errors as mysql_errors
 import altium_parser
-import dk_api
-from mouser_api import fetchSupplierPN
+from dk_api import fetchDigikeyData, fetchDigikeySupplierPN
+from mouser_api import fetchMouserSupplierPN
 from parameter_mapping import ParameterMappingGroupBox
 
 permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
@@ -69,8 +69,8 @@ class App:
         self.dbColumnNames = []
         self.cachedTableData = [[]]
         self.dbParamsGroupBox = None
-
         self.loginInfoDict = {}
+        self.availableSuppliers = ['Digi-Key', 'Mouser']
 
         self.mainLayout = QVBoxLayout()
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
@@ -284,7 +284,8 @@ class App:
         self.ceSupplier2Label = QLabel("Supplier 2:")
         self.ceGridLayout.addWidget(self.ceSupplier2Label, 3, self.label2Column)
         self.ceSupplier2Combobox = QComboBox()
-        self.ceSupplier2Combobox.addItems(['Mouser'])
+        self.ceSupplier2Combobox.addItems(utils.strippedList(self.availableSuppliers,
+                                          [self.ceSupplier1Combobox.currentText()]))
         self.ceSupplier2Combobox.setCurrentIndex(0)
         fields['supplier 2'] = self.ceSupplier2Combobox
         self.ceGridLayout.addWidget(self.ceSupplier2Combobox, 3, self.lineEdit2Column, 1, self.lineEditColSpan)
@@ -414,10 +415,9 @@ class App:
 
     def querySupplier(self):
         dkpn = self.ceSupplierPn1LineEdit.text()
-        print(f"Querying " + self.ceSupplier1Combobox.currentText() + "for {dkpn}")
-        result = dk_api.fetchDigikeyData(dkpn, self.tableNameCombobox.currentText(),
-                                         utils.strippedList(self.dbColumnNames, permanentParams),
-                                         self.dbParamsGroupBox.getParamsDict())
+        print(f"Querying {self.ceSupplier1Combobox.currentText()} for {dkpn}")
+        result = fetchDigikeyData(dkpn, utils.strippedList(self.dbColumnNames, permanentParams),
+                                  self.dbParamsGroupBox.getParamsDict()[self.tableNameCombobox.currentText()])
         print(result)
         if len(result) == 0:
             utils.setLineEditValidationState(self.ceSupplierPn1LineEdit, False)
@@ -432,13 +432,18 @@ class App:
         self.queryAlternateSupplier()
 
     def queryAlternateSupplier(self):
-        if self.ceSupplier2Combobox.currentText() == "Mouser":
-            mfgPN = fields['manufacturer part number'].text()
-            if len(mfgPN) > 0:
-                print(f"Querying Mouser for {mfgPN}")
-                alternateSupplierPN = fetchSupplierPN(mfgPN)
-                self.ceSupplierPn2LineEdit.setText(alternateSupplierPN)
+        mfgPN = fields['manufacturer part number'].text()
+        alternateSupplierPN = ""
+        if len(mfgPN) > 0:
+            supplier2 = self.ceSupplier2Combobox.currentText()
+            print(f"Querying {supplier2} for {mfgPN}")
+            if supplier2 == "Mouser":
+                alternateSupplierPN = fetchMouserSupplierPN(mfgPN)
                 print(f"Mouser Part Number: {alternateSupplierPN}")
+            elif supplier2 == "Digi-Key":
+                alternateSupplierPN = fetchDigikeySupplierPN(mfgPN)
+                print(f"Digi-Key Part Number: {alternateSupplierPN}")
+            self.ceSupplierPn2LineEdit.setText(alternateSupplierPN)
 
     def addToDatabaseClicked(self):
         rowData = []

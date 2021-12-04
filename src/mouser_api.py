@@ -2,6 +2,8 @@ import os
 import csv
 import json
 import requests
+from PyQt5 import QtCore
+from PyQt5.QtCore import QRunnable, QObject
 
 # Mouser Base URL
 BASE_URL = 'https://api.mouser.com/api/v1.0'
@@ -306,6 +308,22 @@ def fetchMouserSupplierPN(manufacturerPartNumber):
     supplierPN = ""
     try:
         supplierPN = res['MouserPartNumber']
+        print(f"Mouser Part Number: {supplierPN}")
     except KeyError:
         print(f"No Mouser Part Number found for {manufacturerPartNumber}")
     return supplierPN
+
+
+class MouserSupplierPnExecutorSignals(QObject):
+    resultAvailable = QtCore.pyqtSignal(str)
+
+
+class MouserSupplierPnExecutor(QRunnable):
+    def __init__(self, manufacturerPartNumber):
+        super(MouserSupplierPnExecutor, self).__init__()
+        self.mfgPN = manufacturerPartNumber
+        self.signals = MouserSupplierPnExecutorSignals()
+
+    def run(self):
+        supplierPN = fetchMouserSupplierPN(self.mfgPN)
+        self.signals.resultAvailable.emit(supplierPN)

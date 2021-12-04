@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem, \
     QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget, QFileDialog, QDialog
 from PyQt5 import QtCore
-from PyQt5.QtCore import Qt, QFile, QTextStream, QSize
+from PyQt5.QtCore import Qt, QFile, QTextStream, QSize, QThread, QThreadPool
 from PyQt5.QtGui import QFont, QFontMetrics, QFontDatabase
 import sys
 import glob
@@ -14,7 +14,7 @@ from mysql_query import MySqlEditQueryData
 import mysql.connector.errors as mysql_errors
 import altium_parser
 from dk_api import fetchDigikeyData, fetchDigikeySupplierPN
-from mouser_api import fetchMouserSupplierPN
+from mouser_api import fetchMouserSupplierPN, MouserSupplierPnExecutor
 from parameter_mapping import ParameterMappingGroupBox
 
 permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
@@ -71,6 +71,8 @@ class App:
         self.dbParamsGroupBox = None
         self.loginInfoDict = {}
         self.availableSuppliers = ['Digi-Key', 'Mouser']
+
+        self.threadPool = QThreadPool.globalInstance()
 
         self.mainLayout = QVBoxLayout()
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
@@ -438,8 +440,9 @@ class App:
             supplier2 = self.ceSupplier2Combobox.currentText()
             print(f"Querying {supplier2} for {mfgPN}")
             if supplier2 == "Mouser":
-                alternateSupplierPN = fetchMouserSupplierPN(mfgPN)
-                print(f"Mouser Part Number: {alternateSupplierPN}")
+                executor = MouserSupplierPnExecutor(mfgPN)
+                executor.signals.resultAvailable.connect(lambda s: self.ceSupplierPn2LineEdit.setText(s))
+                self.threadPool.start(executor)
             elif supplier2 == "Digi-Key":
                 alternateSupplierPN = fetchDigikeySupplierPN(mfgPN)
                 print(f"Digi-Key Part Number: {alternateSupplierPN}")

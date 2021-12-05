@@ -7,10 +7,10 @@ class MainWindow(QMainWindow):
     def __init__(self):
         QMainWindow.__init__(self)
 
-    mousePressed = QtCore.pyqtSignal()
+    mousePressed = QtCore.pyqtSignal(str)
 
     def eventFilter(self, obj: 'QObject', event: 'QEvent') -> bool:
-        if event.type() == QEvent.MouseButtonPress:
-            self.mousePressed.emit()
-            return True
+        if event.type() == QEvent.MouseButtonPress and obj.isWidgetType():
+            self.mousePressed.emit(obj.objectName())
+            return False
         return super(MainWindow, self).eventFilter(obj, event)

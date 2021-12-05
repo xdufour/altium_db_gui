@@ -82,7 +82,7 @@ class App:
         self.mainWindow = MainWindow()
         self.mainWindow.setMinimumSize(1920, 1080)
         self.mainWindow.resize(1920, 1440)
-        self.mainWindow.installEventFilter(self.mainWindow)
+        app.installEventFilter(self.mainWindow)
         self.mainWindow.mousePressed.connect(self.windowClicked)
 
         self.centralWidget = QWidget()
@@ -266,6 +266,7 @@ class App:
         self.ceNameLineEdit.textChanged.connect(self.validateName)
         fields['name'] = self.ceNameLineEdit
         self.ceGridLayout.addWidget(self.ceNameLineEdit, 1, self.lineEdit1Column, 1, self.lineEditColSpan)
+        self.mainWindow.installEventFilter(self.ceNameLineEdit)
 
         self.ceSupplier1Label = QLabel("Supplier 1:")
         self.ceGridLayout.addWidget(self.ceSupplier1Label, 1, self.label2Column)
@@ -606,9 +607,10 @@ class App:
         print(f"Row {row} selected, Name: {self.tableWidget.item(row, 0).text()}")
         self.setTableButtonsEnabled(True)
 
-    def windowClicked(self):
-        self.setTableButtonsEnabled(False)
-        self.tableWidget.clearSelection()
+    def windowClicked(self, objectName):
+        if objectName != 'qt_scrollarea_viewport':
+            self.setTableButtonsEnabled(False)
+            self.tableWidget.clearSelection()
 
     def setTableButtonsEnabled(self, state):
         self.duplicateButton.setEnabled(state)

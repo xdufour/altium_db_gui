@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem, \
-    QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget, QFileDialog, QDialog
-from PyQt5 import QtCore
-from PyQt5.QtCore import Qt, QFile, QTextStream, QSize, QThread, QThreadPool
+    QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget, QFileDialog, QDialog, QMainWindow
+from PyQt5 import QtCore, QtGui
+from PyQt5.QtCore import Qt, QFile, QTextStream, QSize, QThreadPool, QEvent
 from PyQt5.QtGui import QFont, QFontMetrics, QFontDatabase
 import sys
 import glob
@@ -17,6 +17,7 @@ from dk_api import fetchDigikeyData, fetchDigikeySupplierPN
 from mouser_api import fetchMouserSupplierPN
 from parameter_mapping import ParameterMappingGroupBox
 from executor import Executor
+from main_window import MainWindow
 
 permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
                    "Library Ref", "Footprint Path", "Footprint Ref"]
@@ -78,11 +79,16 @@ class App:
         self.mainLayout = QVBoxLayout()
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
 
-        self.mainWindow = QWidget()
-        self.mainWindow.setProperty('mainWindow', True)
+        self.mainWindow = MainWindow()
         self.mainWindow.setMinimumSize(1920, 1080)
         self.mainWindow.resize(1920, 1440)
-        self.mainWindow.setLayout(self.mainLayout)
+        self.mainWindow.installEventFilter(self.mainWindow)
+        self.mainWindow.mousePressed.connect(self.windowClicked)
+
+        self.centralWidget = QWidget()
+        self.mainWindow.setCentralWidget(self.centralWidget)
+        self.centralWidget.setProperty('mainWindow', True)
+        self.centralWidget.setLayout(self.mainLayout)
 
         self.tabWidget = QTabWidget()
         self.tabWidget.setTabPosition(QTabWidget.West)
@@ -236,6 +242,7 @@ class App:
         self.tableWidget.setWordWrap(False)
         self.tableWidget.setSortingEnabled(True)
         self.tableWidget.cellChanged.connect(self.recordDbEdit)
+        self.tableWidget.cellClicked.connect(lambda: self.setTableButtonsEnabled(False))
         self.tableWidget.verticalHeader().sectionClicked.connect(self.tableRowClicked)
         self.tableGroupBoxVLayout.addWidget(self.tableWidget)
 
@@ -596,9 +603,16 @@ class App:
             self.tableWidget.setRowHidden(r, True)
 
     def tableRowClicked(self, row):
-        print(f"Row {row} selected")
-        self.duplicateButton.setEnabled(True)
-        self.deleteButton.setEnabled(True)
+        print(f"Row {row} selected, Name: {self.tableWidget.item(row, 0).text()}")
+        self.setTableButtonsEnabled(True)
+
+    def windowClicked(self):
+        self.setTableButtonsEnabled(False)
+        self.tableWidget.clearSelection()
+
+    def setTableButtonsEnabled(self, state):
+        self.duplicateButton.setEnabled(state)
+        self.deleteButton.setEnabled(state)
 
     def createParameterMappingUI(self):
         tablesColumns = []

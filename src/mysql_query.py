@@ -1,4 +1,5 @@
 from mysql.connector import connection
+from mysql.connector.errors import ProgrammingError
 
 
 def init(user, password, address, database):
@@ -41,7 +42,7 @@ def getTableData(cnx, table):
 
 def insertInDatabase(cnx, table, headers, data):
     cursor = cnx.cursor()
-    query = "INSERT INTO `altium_db_library`.`" + table + "` ("
+    query = 'INSERT INTO `altium_db_library`.`' + table + "` ("
     for h in headers:
         query += "`" + h + "`, "
     query = query[:len(query) - 2]
@@ -55,7 +56,7 @@ def insertInDatabase(cnx, table, headers, data):
         cursor.execute(query, data)
         cnx.commit()
         print(cursor.rowcount, " record inserted")
-    except MySQLdb.ProgrammingError:
+    except ProgrammingError:
         print("SQL Query Insert Failure")
 
 
@@ -78,7 +79,7 @@ class MySqlEditQueryData:
 def editDatabase(cnx, db, table, editList):
     cursor = cnx.cursor()
     for edit in editList:
-        query = "UPDATE `" + db + "`.`" + table + "` SET "
+        query = "UPDATE `" + db + "`.`" + table + "` SET "  # TODO: Refactor to use escape sequences (prevent injection)
         for columnName, value in zip(edit.columnNames, edit.values):
             query += "`" + columnName + "` = '" + value + "', "
         query = query[:len(query) - 2]
@@ -88,5 +89,5 @@ def editDatabase(cnx, db, table, editList):
             cursor.execute(query)
             cnx.commit()
             print(cursor.rowcount, " row(s) affected")
-        except MySQLdb.ProgrammingError:
+        except ProgrammingError:
             print("SQL Query Update Failure")

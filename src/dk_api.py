@@ -31,11 +31,7 @@ def fetchDigikeyData(digikeyPartNumber, requestedParams, paramDict):
             elif column == "Unit Price":
                 value = part.standard_pricing[0].to_dict()['unit_price']
             else:
-                try:
-                    value = dkDataDict[column]
-                except KeyError:
-                    value = ""
-                    print(f"No match found for \'{column}\'")
+                value = dkDataDict.get(column, "")
             result.append([column, value])
         return result
     except AttributeError:

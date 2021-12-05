@@ -462,11 +462,7 @@ class App:
     def addToDatabaseClicked(self):
         rowData = []
         for col in self.dbColumnNames:
-            try:
-                rowData.append(utils.getFieldText(fields[col.lower()]))
-            except KeyError:
-                print(f"Error: No field found for \'{col.lower()}\'")
-                return
+            rowData.append(utils.getFieldText(fields.get(col.lower(), "")))
         mysql_query.insertInDatabase(self.cnx, self.tableNameCombobox.currentText(), self.dbColumnNames, rowData)
         self.updateTableViewFrame()
         self.updateCreateComponentFrame()
@@ -489,14 +485,10 @@ class App:
 
     def loadDbLogins(self):
         self.loginInfoDict = loadFromJson(mysql_login_filename)
-        if 'address' in self.loginInfoDict:
-            self.dbAddressLineEdit.insert(self.loginInfoDict['address'])
-        if 'user' in self.loginInfoDict:
-            self.dbUserLineEdit.insert(self.loginInfoDict['user'])
-        if 'password' in self.loginInfoDict:
-            self.dbPasswordLineEdit.insert(self.loginInfoDict['password'])
-        if 'database' in self.loginInfoDict:
-            self.dbNameLineEdit.insert(self.loginInfoDict['database'])
+        self.dbAddressLineEdit.insert(self.loginInfoDict.get('address', ''))
+        self.dbUserLineEdit.insert(self.loginInfoDict.get('user', ''))
+        self.dbPasswordLineEdit.insert(self.loginInfoDict.get('password', ''))
+        self.dbNameLineEdit.insert(self.loginInfoDict.get('database', ''))
         self.dbLoginSaveButton.setEnabled(False)
 
     def saveDbLogins(self):
@@ -536,8 +528,7 @@ class App:
 
     def loadLibSearchPath(self):
         searchPathDict = loadFromJson(lib_search_path_filename)
-        if 'filepath' in searchPathDict:
-            self.updateSearchPath(searchPathDict['filepath'])
+        self.updateSearchPath(searchPathDict.get('filepath', ''))
 
     def updateSearchPath(self, filepath):
         self.searchPathLineEdit.setText(filepath)

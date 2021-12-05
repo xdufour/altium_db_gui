@@ -1,3 +1,5 @@
 rmdir /s /q build
 rmdir /s /q dist
-pyinstaller --onefile --icon=app.ico src/main.py
+copy "assets\ui\app.ico" app.ico
+pyinstaller --onefile --windowed --icon=app.ico --name=altium_db_gui src/main.py
+del app.ico

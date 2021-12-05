@@ -38,7 +38,7 @@ def getFieldText(widget):
 def setLineEditValidationState(lineEdit, state):
     lineEdit.setProperty('valid', state)
     lineEdit.style().unpolish(lineEdit)
-    lineEdit.style().unpolish(lineEdit)
+    lineEdit.style().polish(lineEdit)
     lineEdit.repaint()
 
 

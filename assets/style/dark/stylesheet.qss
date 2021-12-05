@@ -1,8 +1,7 @@
 /*
- *  BreezeDark stylesheet.
+ *  Dark theme stylesheet
  *
- *  :author: Colin Duquesnoy
- *  :editor: Alex Huszagh
+ *  :author: Xavier Dufour
  *  :license: MIT, see LICENSE.md
  *
  *  This is originally a fork of QDarkStyleSheet, and is based on Breeze/
@@ -1965,10 +1964,14 @@ QScrollArea:hover
     border: 0em solid black;
 }
 
+QStatusBar {
+    font-size: 9pt;
+    color: #adaead;
+}
+
 /* ICONS */
-/**
- *  Qt's built-in icons can look pretty bad if the system theme
- *  is a different color than the current one. For example, when
+ /*  Qt's built-in icons can look pretty bad if the system theme */
+ /*  is a different color than the current one. For example, when
  *  using a dark theme, with a light UI, the `Ok` button is greyed
  *  out for an about dialog.
  *

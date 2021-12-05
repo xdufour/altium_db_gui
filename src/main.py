@@ -18,6 +18,7 @@ from mouser_api import fetchMouserSupplierPN
 from parameter_mapping import ParameterMappingGroupBox
 from executor import Executor
 from main_window import MainWindow
+from statusbar_logger import *
 
 permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
                    "Library Ref", "Footprint Path", "Footprint Ref"]
@@ -84,6 +85,10 @@ class App:
         self.mainWindow.resize(1920, 1440)
         app.installEventFilter(self.mainWindow)
         self.mainWindow.mousePressed.connect(self.windowClicked)
+        self.mainWindow.statusBar().setSizeGripEnabled(False)
+        self.mainWindow.statusBar().setMinimumHeight(50)
+        self.mainWindow.statusBar().hide()
+        StatusBarLogger.registerStatusBar(self.mainWindow.statusBar())
 
         self.centralWidget = QWidget()
         self.mainWindow.setCentralWidget(self.centralWidget)
@@ -250,14 +255,12 @@ class App:
         self.ceGridLayout.addWidget(self.tableLabel, 0, self.label1Column)
         self.tableNameCombobox = QComboBox()
         self.tableNameCombobox.currentTextChanged.connect(self.loadGUI)
-        self.ceGridLayout.addWidget(self.tableNameCombobox, 0, self.lineEdit1Column, 1,
-                                    self.lineEditColSpan)
+        self.ceGridLayout.addWidget(self.tableNameCombobox, 0, self.lineEdit1Column, 1, self.lineEditColSpan)
 
         self.ceAddButton = QPushButton("Add component")
         self.ceAddButton.released.connect(self.addToDatabaseClicked)
         self.ceAddButton.setEnabled(False)
         self.ceAddButton.setProperty("accent", True)
-        self.ceAddButton.setStyleSheet("QPushButton#AccentButton { background-color: 51b7eb;}")
         self.ceGridLayout.addWidget(self.ceAddButton, 0, self.lineEdit2Column, 1, self.lineEditColSpan)
 
         self.ceNameLabel = QLabel("Name:")

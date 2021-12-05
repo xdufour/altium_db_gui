@@ -1,12 +1,11 @@
-import MySQLdb
-import mysql.connector.errors
-from mysql.connector import (connection)
+from mysql.connector import connection
 
 
 def init(user, password, address, database):
     cnx = connection.MySQLConnection(user=user, password=password,
                                      host=address,
-                                     database=database)
+                                     database=database,
+                                     auth_plugin='mysql_native_password')
     return cnx
 
 

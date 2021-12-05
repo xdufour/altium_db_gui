@@ -444,18 +444,17 @@ class App:
 
     def queryAlternateSupplier(self):
         mfgPN = fields['manufacturer part number'].text()
-        alternateSupplierPN = ""
+        executor = None
         if len(mfgPN) > 0:
             supplier2 = self.ceSupplier2Combobox.currentText()
             print(f"Querying {supplier2} for {mfgPN}")
             if supplier2 == "Mouser":
                 executor = Executor(fetchMouserSupplierPN, mfgPN)
+            elif supplier2 == "Digi-Key":
+                executor = Executor(fetchDigikeySupplierPN, mfgPN)
+            if executor is not None:
                 executor.signals.resultAvailable.connect(lambda s: self.ceSupplierPn2LineEdit.setText(s))
                 self.threadPool.start(executor)
-            elif supplier2 == "Digi-Key":
-                alternateSupplierPN = fetchDigikeySupplierPN(mfgPN)
-                print(f"Digi-Key Part Number: {alternateSupplierPN}")
-            self.ceSupplierPn2LineEdit.setText(alternateSupplierPN)
 
     def addToDatabaseClicked(self):
         rowData = []

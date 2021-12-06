@@ -2018,5 +2018,5 @@ QDialogButtonBox QPushButton,
 QMessageBox QPushButton
 {
     min-height: 1.1em;
-    min-width: 5em;
+    min-width: 7em;
 }

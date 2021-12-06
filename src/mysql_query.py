@@ -91,3 +91,15 @@ def editDatabase(cnx, db, table, editList):
             print(cursor.rowcount, " row(s) affected")
         except ProgrammingError:
             print("SQL Query Update Failure")
+
+
+def deleteRowFromDatabase(cnx, db, table, primaryKey, pkValue):
+    cursor = cnx.cursor()
+    query = f"DELETE FROM `{db}`.`{table}` WHERE `{primaryKey}` = '{pkValue}'"
+    print(f"SQL Query: {query}")
+    try:
+        cursor.execute(query)
+        cnx.commit()
+        print(cursor.rowcount, " row(s) deleted")
+    except ProgrammingError:
+        print("SQL Query Update Failure")

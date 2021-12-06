@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem, \
-    QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget, QFileDialog, QDialog, QMainWindow
+    QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget, QFileDialog, QDialog, QMessageBox
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt, QFile, QTextStream, QSize, QThreadPool, QEvent
 from PyQt5.QtGui import QFont, QFontMetrics, QFontDatabase
@@ -73,6 +73,7 @@ class App:
         self.cachedTableData = [[]]
         self.dbParamsGroupBox = None
         self.loginInfoDict = {}
+        self.currentSelectedRowPkValue = ""
         self.availableSuppliers = ['Digi-Key', 'Mouser']
 
         self.threadPool = QThreadPool.globalInstance()
@@ -230,6 +231,7 @@ class App:
         self.duplicateButton.setIcon(editIcon)
         self.duplicateButton.setIconSize(QSize(40, 40))
         self.duplicateButton.setDisabled(True)
+        self.duplicateButton.setObjectName("DuplicateButton")
         self.duplicateButton.setToolTip("Duplicate selected row")
         self.actionsHLayout.addWidget(self.duplicateButton)
 
@@ -238,6 +240,8 @@ class App:
         self.deleteButton.setIconSize(QSize(40, 40))
         self.deleteButton.setDisabled(True)
         self.deleteButton.setToolTip("Delete selected row")
+        self.deleteButton.setObjectName("DeleteButton")
+        self.deleteButton.released.connect(self.deleteDbRow)
         self.actionsHLayout.addWidget(self.deleteButton)
 
         self.tableWidget = QTableWidget()
@@ -299,7 +303,7 @@ class App:
         self.ceGridLayout.addWidget(self.ceSupplier2Label, 3, self.label2Column)
         self.ceSupplier2Combobox = QComboBox()
         self.ceSupplier2Combobox.addItems(utils.strippedList(self.availableSuppliers,
-                                          [self.ceSupplier1Combobox.currentText()]))
+                                                             [self.ceSupplier1Combobox.currentText()]))
         self.ceSupplier2Combobox.setCurrentIndex(0)
         fields['supplier 2'] = self.ceSupplier2Combobox
         self.ceGridLayout.addWidget(self.ceSupplier2Combobox, 3, self.lineEdit2Column, 1, self.lineEditColSpan)
@@ -597,17 +601,31 @@ class App:
             self.tableWidget.setRowHidden(r, True)
 
     def tableRowClicked(self, row):
-        print(f"Row {row} selected, Name: {self.tableWidget.item(row, 0).text()}")
+        self.tableWidget.clearSelection()
+        self.tableWidget.selectRow(row)
+        self.currentSelectedRowPkValue = self.tableWidget.item(row, 0).text()
+        print(f"Row {row} selected, Name: {self.currentSelectedRowPkValue}")
         self.setTableButtonsEnabled(True)
 
     def windowClicked(self, objectName):
-        if objectName != 'qt_scrollarea_viewport':
+        if objectName != 'qt_scrollarea_viewport' and objectName != 'DeleteButton' and objectName != 'DuplicateButton':
             self.setTableButtonsEnabled(False)
             self.tableWidget.clearSelection()
 
     def setTableButtonsEnabled(self, state):
         self.duplicateButton.setEnabled(state)
         self.deleteButton.setEnabled(state)
+
+    def deleteDbRow(self):
+        msgBox = QMessageBox(QMessageBox.Question, 'Confirm Deletion', f'Permanently delete database entry '
+                                                                       f'\'{self.currentSelectedRowPkValue}\'?')
+        msgBox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        if msgBox.exec() == QMessageBox.Ok:
+            self.setTableButtonsEnabled(False)
+            mysql_query.deleteRowFromDatabase(self.cnx, self.loginInfoDict['database'],
+                                              self.tableNameCombobox.currentText(),
+                                              'Name', self.currentSelectedRowPkValue)
+            self.updateTableViewFrame()
 
     def createParameterMappingUI(self):
         tablesColumns = []

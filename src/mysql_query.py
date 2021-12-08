@@ -6,7 +6,8 @@ def init(user, password, address, database):
     cnx = connection.MySQLConnection(user=user, password=password,
                                      host=address,
                                      database=database,
-                                     auth_plugin='mysql_native_password')
+                                     auth_plugin='mysql_native_password',
+                                     connect_timeout=1000)
     return cnx
 
 

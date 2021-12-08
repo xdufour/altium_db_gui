@@ -75,7 +75,9 @@ class ParameterMappingGroupBox(QGroupBox):
             lineEdits[k].deleteLater()
         lineEdits.clear()
 
-        self.paramsDicts = loadFromJson(jsonFile)
+        configDict = loadFromJson(jsonFile)
+        if len(configDict) > 0:
+            self.paramsDicts = configDict
 
         self.mainGridLayout.takeAt(self.mainGridLayout.indexOf(self.saveButton))
 

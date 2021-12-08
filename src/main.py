@@ -62,6 +62,9 @@ class App:
             print(f"Set application font: {self.fontfamily}")
             app.setFont(QFont(self.fontfamily, 10))
 
+        fm = QFontMetrics(QFont(self.fontfamily, 9))
+        self.textHeight = fm.boundingRect("Text").height()
+
         createFolderIfNotExists(os.getenv('APPDATA') + '\\Altium DB GUI\\')
 
         self.connected = False
@@ -82,8 +85,8 @@ class App:
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
 
         self.mainWindow = MainWindow()
-        self.mainWindow.setMinimumSize(1920, 1080)
-        self.mainWindow.resize(1920, 1440)
+        self.mainWindow.setMinimumSize(QApplication.desktop().screenGeometry().width() * 0.7,
+                                       QApplication.desktop().screenGeometry().height() * 0.8)
         app.installEventFilter(self.mainWindow)
         self.mainWindow.mousePressed.connect(self.windowClicked)
         self.mainWindow.statusBar().setSizeGripEnabled(False)
@@ -107,7 +110,7 @@ class App:
         self.tabWidget.setTabIcon(0, homeIcon)
         self.tabWidget.addTab(self.settingsWidget, '')
         self.tabWidget.setTabIcon(1, settingsIcon)
-        self.tabWidget.setIconSize(QtCore.QSize(64, 64))
+        self.tabWidget.setIconSize(QtCore.QSize(self.textHeight * 2.15, self.textHeight * 2.15))
 
         # Settings page widgets
         self.settingsVLayout = QVBoxLayout()
@@ -125,9 +128,11 @@ class App:
 
         self.loginGridLayout = QGridLayout()
         self.loginGroupBox.setLayout(self.loginGridLayout)
-        self.loginGridLayout.setColumnMinimumWidth(0, 120)
-        self.loginGridLayout.setColumnMinimumWidth(1, 120)
-        self.loginGridLayout.setSpacing(20)
+        self.loginGridLayout.setColumnMinimumWidth(0, self.textHeight * 4)
+        self.loginGridLayout.setColumnStretch(0, 1)
+        self.loginGridLayout.setColumnMinimumWidth(1, self.textHeight * 4)
+        self.loginGridLayout.setColumnStretch(1, 1)
+        self.loginGridLayout.setSpacing(self.textHeight * 0.6)
 
         self.dbAddressLabel = QLabel("Address:")
         self.dbAddressLineEdit = QLineEdit()
@@ -203,7 +208,7 @@ class App:
         self.hometopHLayout.addWidget(self.componentEditorGroupBox)
 
         self.tableGroupBox = QGroupBox("Table View")
-        self.homeVLayout.addSpacing(20)
+        self.homeVLayout.addSpacing(self.textHeight * 0.6)
         self.homeVLayout.addWidget(self.tableGroupBox)
 
         self.tableGroupBoxVLayout = QVBoxLayout()
@@ -219,9 +224,11 @@ class App:
         self.actionsHLayout.addWidget(self.tableSearchLineEdit)
         self.actionsHLayout.addStretch(1)
 
+        tableIconSize = self.textHeight * 1.5
+
         self.applyChangesButton = QPushButton()
         self.applyChangesButton.setIcon(applyIcon)
-        self.applyChangesButton.setIconSize(QSize(40, 40))
+        self.applyChangesButton.setIconSize(QSize(tableIconSize, tableIconSize))
         self.applyChangesButton.setDisabled(True)
         self.applyChangesButton.released.connect(self.applyDbEdits)
         self.applyChangesButton.setToolTip("Apply changes")
@@ -229,7 +236,7 @@ class App:
 
         self.duplicateButton = QPushButton()
         self.duplicateButton.setIcon(editIcon)
-        self.duplicateButton.setIconSize(QSize(40, 40))
+        self.duplicateButton.setIconSize(QSize(tableIconSize, tableIconSize))
         self.duplicateButton.setDisabled(True)
         self.duplicateButton.setObjectName("DuplicateButton")
         self.duplicateButton.setToolTip("Duplicate selected row")
@@ -237,7 +244,7 @@ class App:
 
         self.deleteButton = QPushButton()
         self.deleteButton.setIcon(deleteIcon)
-        self.deleteButton.setIconSize(QSize(40, 40))
+        self.deleteButton.setIconSize(QSize(tableIconSize, tableIconSize))
         self.deleteButton.setDisabled(True)
         self.deleteButton.setToolTip("Delete selected row")
         self.deleteButton.setObjectName("DeleteButton")
@@ -294,10 +301,11 @@ class App:
 
         self.ceSupplierPnButton = QPushButton()
         self.ceSupplierPnButton.setIcon(downloadIcon)
-        self.ceSupplierPnButton.setIconSize(QSize(48, 30))
+        self.ceSupplierPnButton.setIconSize(QSize(self.textHeight * 1.5, self.textHeight))
+        self.ceSupplierPnButton.setFixedWidth(self.textHeight * 3)
         self.ceSupplierPnButton.setToolTip("Query supplier for part number")
         self.ceSupplierPnButton.released.connect(self.querySupplier)
-        self.ceGridLayout.addWidget(self.ceSupplierPnButton, 2, self.lineEdit2Column + 1)
+        self.ceGridLayout.addWidget(self.ceSupplierPnButton, 2, self.lineEdit2Column + 1, alignment=Qt.AlignRight)
 
         self.ceSupplier2Label = QLabel("Supplier 2:")
         self.ceGridLayout.addWidget(self.ceSupplier2Label, 3, self.label2Column)
@@ -344,11 +352,11 @@ class App:
         self.ceGridLayout.addWidget(self.ceFootprintRefCombobox, 8, self.lineEdit2Column, 1,
                                     self.lineEditColSpan)
 
-        self.ceGridLayout.setSpacing(20)
-        self.ceGridLayout.setColumnMinimumWidth(self.spacingColumn, 50)
+        self.ceGridLayout.setSpacing(self.textHeight * 0.6)
+        self.ceGridLayout.setColumnMinimumWidth(self.spacingColumn, self.textHeight * 1.6)
         self.ceGridLayout.setColumnStretch(self.lineEdit1Column, 1)
         self.ceGridLayout.setColumnStretch(self.lineEdit2Column, 1)
-        self.ceGridLayout.setColumnMinimumWidth(self.lineEdit2Column + 1, 80)
+        self.ceGridLayout.setColumnMinimumWidth(self.lineEdit2Column + 1, self.textHeight * 2.6)
         self.ceGridLayout.setColumnMinimumWidth(self.lineEdit1Column + 1, 80)
 
         self.loadDbLogins()
@@ -409,7 +417,7 @@ class App:
         self.tableWidget.setHorizontalHeaderLabels(self.dbColumnNames)
 
         fm = QFontMetrics(QFont(self.fontfamily, 9))
-        maxColumnWidth = 500
+        maxColumnWidth = self.textHeight * 18
         widthPadding = 40
         cellWidths = []
 

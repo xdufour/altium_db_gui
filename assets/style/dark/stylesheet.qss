@@ -95,7 +95,7 @@ QGroupBox
     /* Need to make sure the groupbox doesn't compress below the title. */
     min-height: 1.2em;
     border: 0.04em solid #454545;
-    border-radius: 20%;
+    border-radius: 0.8em;
     /**
      * This gives us enough space at the top to ensure we can move the
      * title to be inside the guidelines, and the padding at the top
@@ -422,7 +422,7 @@ QLineEdit
     padding: 0.4em;
     border-style: solid;
     border: 0.04em solid #2f2f2f;
-    border-radius: 10px;
+    border-radius: 0.3em;
     color: #eff0f1;
 }
 
@@ -776,7 +776,7 @@ QPushButton
     background-color: #1c1c1c;
     border: 0.04em solid #76797c;
     padding: 0.4em;
-    border-radius: 10px;
+    border-radius: 0.3em;
     outline: none;
     min-height: 1.1em;
 }
@@ -834,7 +834,7 @@ QPushButton:pressed
 QComboBox
 {
     border: 0.04em solid #2f2f2f;
-    border-radius: 10px;
+    border-radius: 0.3em;
     background-color: #2f2f2f;
     padding: 0.4em;
     min-width: 2.5em;

@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QLabel, QLineEdit, QComboBox, QGroupBox, QPushButton, QGridLayout
-from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QFont, QFontMetrics
+from PyQt5 import QtGui
 from json_appdata import *
 import utils
 
@@ -15,6 +16,9 @@ class ParameterMappingGroupBox(QGroupBox):
 
         self.tableColumnsList = tableColumnsList
         self.paramsDicts = {}
+
+        fm = QFontMetrics(QFont(QtGui.QGuiApplication.font().family(), 9))
+        self.textHeight = fm.boundingRect("Text").height()
 
         for i, table in enumerate(tableList):
             self.paramsDicts[table] = {}
@@ -48,8 +52,8 @@ class ParameterMappingGroupBox(QGroupBox):
         self.supplierListComboBox = QComboBox()
         self.supplierListComboBox.addItems(supplierList)
         self.mainGridLayout.addWidget(self.supplierListComboBox, self.comboBoxRow, self.supplierParamsColumn + 1)
-        self.mainGridLayout.setSpacing(20)
-        self.mainGridLayout.setColumnMinimumWidth(2, 100)
+        self.mainGridLayout.setSpacing(self.textHeight * 0.6)
+        self.mainGridLayout.setColumnMinimumWidth(2, self.textHeight * 3.3)
 
         self.dbParamLabel = QLabel("Database Field Name")
         self.mainGridLayout.addWidget(self.dbParamLabel, self.labelRow, self.dbParamsColumn)

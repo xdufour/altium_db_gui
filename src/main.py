@@ -58,11 +58,12 @@ class App:
             print("Font not loaded")
         else:
             families = fontDb.applicationFontFamilies(fontId)
-            self.fontfamily = families[0]
-            print(f"Set application font: {self.fontfamily}")
-            app.setFont(QFont(self.fontfamily, 10))
+            self.fontFamily = families[0]
+            self.fontSize = 10
+            print(f"Set application font: {self.fontFamily}")
+            app.setFont(QFont(self.fontFamily, self.fontSize))
 
-        fm = QFontMetrics(QFont(self.fontfamily, 9))
+        fm = QFontMetrics(QFont(self.fontFamily, self.fontSize))
         self.textHeight = fm.boundingRect("Text").height()
 
         createFolderIfNotExists(os.getenv('APPDATA') + '\\Altium DB GUI\\')
@@ -110,7 +111,7 @@ class App:
         self.tabWidget.setTabIcon(0, homeIcon)
         self.tabWidget.addTab(self.settingsWidget, '')
         self.tabWidget.setTabIcon(1, settingsIcon)
-        self.tabWidget.setIconSize(QtCore.QSize(self.textHeight * 2.15, self.textHeight * 2.15))
+        self.tabWidget.setIconSize(QtCore.QSize(self.textHeight * 2, self.textHeight * 2))
 
         # Settings page widgets
         self.settingsVLayout = QVBoxLayout()
@@ -128,9 +129,9 @@ class App:
 
         self.loginGridLayout = QGridLayout()
         self.loginGroupBox.setLayout(self.loginGridLayout)
-        self.loginGridLayout.setColumnMinimumWidth(0, self.textHeight * 4)
+        self.loginGridLayout.setColumnMinimumWidth(0, self.textHeight * 3.6)
         self.loginGridLayout.setColumnStretch(0, 1)
-        self.loginGridLayout.setColumnMinimumWidth(1, self.textHeight * 4)
+        self.loginGridLayout.setColumnMinimumWidth(1, self.textHeight * 3.6)
         self.loginGridLayout.setColumnStretch(1, 1)
         self.loginGridLayout.setSpacing(self.textHeight * 0.6)
 
@@ -224,7 +225,7 @@ class App:
         self.actionsHLayout.addWidget(self.tableSearchLineEdit)
         self.actionsHLayout.addStretch(1)
 
-        tableIconSize = self.textHeight * 1.5
+        tableIconSize = self.textHeight * 1.4
 
         self.applyChangesButton = QPushButton()
         self.applyChangesButton.setIcon(applyIcon)
@@ -302,7 +303,7 @@ class App:
         self.ceSupplierPnButton = QPushButton()
         self.ceSupplierPnButton.setIcon(downloadIcon)
         self.ceSupplierPnButton.setIconSize(QSize(self.textHeight * 1.5, self.textHeight))
-        self.ceSupplierPnButton.setFixedWidth(self.textHeight * 3)
+        self.ceSupplierPnButton.setFixedWidth(self.textHeight * 2.6)
         self.ceSupplierPnButton.setToolTip("Query supplier for part number")
         self.ceSupplierPnButton.released.connect(self.querySupplier)
         self.ceGridLayout.addWidget(self.ceSupplierPnButton, 2, self.lineEdit2Column + 1, alignment=Qt.AlignRight)
@@ -353,11 +354,11 @@ class App:
                                     self.lineEditColSpan)
 
         self.ceGridLayout.setSpacing(self.textHeight * 0.6)
-        self.ceGridLayout.setColumnMinimumWidth(self.spacingColumn, self.textHeight * 1.6)
+        self.ceGridLayout.setColumnMinimumWidth(self.spacingColumn, self.textHeight * 1.5)
         self.ceGridLayout.setColumnStretch(self.lineEdit1Column, 1)
         self.ceGridLayout.setColumnStretch(self.lineEdit2Column, 1)
-        self.ceGridLayout.setColumnMinimumWidth(self.lineEdit2Column + 1, self.textHeight * 2.6)
-        self.ceGridLayout.setColumnMinimumWidth(self.lineEdit1Column + 1, 80)
+        self.ceGridLayout.setColumnMinimumWidth(self.lineEdit2Column + 1, self.textHeight * 2.5)
+        self.ceGridLayout.setColumnMinimumWidth(self.lineEdit1Column + 1, self.textHeight * 2.5)
 
         self.loadDbLogins()
         self.testDbConnection()
@@ -368,7 +369,7 @@ class App:
         self.duplicateButton.setMinimumWidth(self.ceSupplierPnButton.width())
         self.deleteButton.setMinimumWidth(self.ceSupplierPnButton.width())
         self.tableSearchLineEdit.setFixedWidth(max(self.tableWidget.verticalHeader().width() +
-                                                   self.tableWidget.columnWidth(0), 400))
+                                                   self.tableWidget.columnWidth(0), self.textHeight * 12))
         sys.exit(app.exec())
 
     def loadGUI(self, componentName):
@@ -416,9 +417,9 @@ class App:
         self.tableWidget.setRowCount(len(self.cachedTableData))
         self.tableWidget.setHorizontalHeaderLabels(self.dbColumnNames)
 
-        fm = QFontMetrics(QFont(self.fontfamily, 9))
-        maxColumnWidth = self.textHeight * 18
-        widthPadding = 40
+        fm = QFontMetrics(QFont(self.fontFamily, 9))
+        maxColumnWidth = fm.boundingRect("Text").height() * 18
+        widthPadding = fm.boundingRect("Text").height() * 1.3
         cellWidths = []
 
         # Insert data

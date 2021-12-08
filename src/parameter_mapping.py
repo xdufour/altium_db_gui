@@ -17,7 +17,7 @@ class ParameterMappingGroupBox(QGroupBox):
         self.tableColumnsList = tableColumnsList
         self.paramsDicts = {}
 
-        fm = QFontMetrics(QFont(QtGui.QGuiApplication.font().family(), 9))
+        fm = QFontMetrics(QFont(QtGui.QGuiApplication.font().family(), QtGui.QGuiApplication.font().pointSize()))
         self.textHeight = fm.boundingRect("Text").height()
 
         for i, table in enumerate(tableList):
@@ -53,7 +53,7 @@ class ParameterMappingGroupBox(QGroupBox):
         self.supplierListComboBox.addItems(supplierList)
         self.mainGridLayout.addWidget(self.supplierListComboBox, self.comboBoxRow, self.supplierParamsColumn + 1)
         self.mainGridLayout.setSpacing(self.textHeight * 0.6)
-        self.mainGridLayout.setColumnMinimumWidth(2, self.textHeight * 3.3)
+        self.mainGridLayout.setColumnMinimumWidth(2, self.textHeight * 3)
 
         self.dbParamLabel = QLabel("Database Field Name")
         self.mainGridLayout.addWidget(self.dbParamLabel, self.labelRow, self.dbParamsColumn)

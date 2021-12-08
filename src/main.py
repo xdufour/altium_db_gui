@@ -86,8 +86,8 @@ class App:
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
 
         self.mainWindow = MainWindow()
-        self.mainWindow.setMinimumSize(QApplication.desktop().screenGeometry().width() * 0.7,
-                                       QApplication.desktop().screenGeometry().height() * 0.8)
+        self.mainWindow.setMinimumSize(round(QApplication.desktop().screenGeometry().width() * 0.7),
+                                       round(QApplication.desktop().screenGeometry().height() * 0.8))
         app.installEventFilter(self.mainWindow)
         self.mainWindow.mousePressed.connect(self.windowClicked)
         self.mainWindow.statusBar().setSizeGripEnabled(False)
@@ -111,7 +111,7 @@ class App:
         self.tabWidget.setTabIcon(0, homeIcon)
         self.tabWidget.addTab(self.settingsWidget, '')
         self.tabWidget.setTabIcon(1, settingsIcon)
-        self.tabWidget.setIconSize(QtCore.QSize(self.textHeight * 2, self.textHeight * 2))
+        self.tabWidget.setIconSize(QtCore.QSize(round(self.textHeight * 1.8), round(self.textHeight * 1.8)))
 
         # Settings page widgets
         self.settingsVLayout = QVBoxLayout()
@@ -129,11 +129,11 @@ class App:
 
         self.loginGridLayout = QGridLayout()
         self.loginGroupBox.setLayout(self.loginGridLayout)
-        self.loginGridLayout.setColumnMinimumWidth(0, self.textHeight * 3.6)
+        self.loginGridLayout.setColumnMinimumWidth(0, round(self.textHeight * 3.6))
         self.loginGridLayout.setColumnStretch(0, 1)
-        self.loginGridLayout.setColumnMinimumWidth(1, self.textHeight * 3.6)
+        self.loginGridLayout.setColumnMinimumWidth(1, round(self.textHeight * 3.6))
         self.loginGridLayout.setColumnStretch(1, 1)
-        self.loginGridLayout.setSpacing(self.textHeight * 0.6)
+        self.loginGridLayout.setSpacing(round(self.textHeight * 0.6))
 
         self.dbAddressLabel = QLabel("Address:")
         self.dbAddressLineEdit = QLineEdit()
@@ -209,7 +209,7 @@ class App:
         self.hometopHLayout.addWidget(self.componentEditorGroupBox)
 
         self.tableGroupBox = QGroupBox("Table View")
-        self.homeVLayout.addSpacing(self.textHeight * 0.6)
+        self.homeVLayout.addSpacing(round(self.textHeight * 0.6))
         self.homeVLayout.addWidget(self.tableGroupBox)
 
         self.tableGroupBoxVLayout = QVBoxLayout()
@@ -225,7 +225,7 @@ class App:
         self.actionsHLayout.addWidget(self.tableSearchLineEdit)
         self.actionsHLayout.addStretch(1)
 
-        tableIconSize = self.textHeight * 1.4
+        tableIconSize = round(self.textHeight * 1.4)
 
         self.applyChangesButton = QPushButton()
         self.applyChangesButton.setIcon(applyIcon)
@@ -302,8 +302,8 @@ class App:
 
         self.ceSupplierPnButton = QPushButton()
         self.ceSupplierPnButton.setIcon(downloadIcon)
-        self.ceSupplierPnButton.setIconSize(QSize(self.textHeight * 1.5, self.textHeight))
-        self.ceSupplierPnButton.setFixedWidth(self.textHeight * 2.6)
+        self.ceSupplierPnButton.setIconSize(QSize(round(self.textHeight * 1.5), self.textHeight))
+        self.ceSupplierPnButton.setFixedWidth(round(self.textHeight * 2.6))
         self.ceSupplierPnButton.setToolTip("Query supplier for part number")
         self.ceSupplierPnButton.released.connect(self.querySupplier)
         self.ceGridLayout.addWidget(self.ceSupplierPnButton, 2, self.lineEdit2Column + 1, alignment=Qt.AlignRight)
@@ -353,12 +353,12 @@ class App:
         self.ceGridLayout.addWidget(self.ceFootprintRefCombobox, 8, self.lineEdit2Column, 1,
                                     self.lineEditColSpan)
 
-        self.ceGridLayout.setSpacing(self.textHeight * 0.6)
-        self.ceGridLayout.setColumnMinimumWidth(self.spacingColumn, self.textHeight * 1.5)
+        self.ceGridLayout.setSpacing(round(self.textHeight * 0.6))
+        self.ceGridLayout.setColumnMinimumWidth(self.spacingColumn, round(self.textHeight * 1.5))
         self.ceGridLayout.setColumnStretch(self.lineEdit1Column, 1)
         self.ceGridLayout.setColumnStretch(self.lineEdit2Column, 1)
-        self.ceGridLayout.setColumnMinimumWidth(self.lineEdit2Column + 1, self.textHeight * 2.5)
-        self.ceGridLayout.setColumnMinimumWidth(self.lineEdit1Column + 1, self.textHeight * 2.5)
+        self.ceGridLayout.setColumnMinimumWidth(self.lineEdit2Column + 1, round(self.textHeight * 2.5))
+        self.ceGridLayout.setColumnMinimumWidth(self.lineEdit1Column + 1, round(self.textHeight * 2.5))
 
         self.loadDbLogins()
         self.testDbConnection()
@@ -419,7 +419,7 @@ class App:
 
         fm = QFontMetrics(QFont(self.fontFamily, 9))
         maxColumnWidth = fm.boundingRect("Text").height() * 18
-        widthPadding = fm.boundingRect("Text").height() * 1.3
+        widthPadding = round(fm.boundingRect("Text").height() * 1.3)
         cellWidths = []
 
         # Insert data

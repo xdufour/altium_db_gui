@@ -86,8 +86,9 @@ class App:
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
 
         self.mainWindow = MainWindow()
-        self.mainWindow.setMinimumSize(round(QApplication.desktop().screenGeometry().width() * 0.7),
-                                       round(QApplication.desktop().screenGeometry().height() * 0.8))
+        screenSize = QApplication.desktop().screenGeometry()
+        self.mainWindow.setMinimumSize(screenSize.width() * (1.5 - 0.5 * (screenSize.width() / screenSize.height())),
+                                       screenSize.height() * 0.8)
         app.installEventFilter(self.mainWindow)
         self.mainWindow.mousePressed.connect(self.windowClicked)
         self.mainWindow.statusBar().setSizeGripEnabled(False)

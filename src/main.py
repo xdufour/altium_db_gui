@@ -523,9 +523,12 @@ class App:
                     self.dbTestButton.setText("Connected")
                     self.tabWidget.setTabEnabled(0, True)
             except mysql_errors.ProgrammingError:
-                print("Access Denied")
-            except mysql_errors.InterfaceError:
-                print("Invalid Login Information Format")
+                print("MySQL Server Connection: Access Denied")
+            except mysql_errors.InterfaceError as e:
+                if e.errno == 2003:
+                    print("MySQL Server Connection: Timed out")
+                else:
+                    print(f"MySQL Server Connection: Unknown error (#{e.errno})")
         if not self.connected:
             self.tabWidget.setTabEnabled(0, False)
 

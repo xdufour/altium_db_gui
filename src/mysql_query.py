@@ -7,7 +7,7 @@ def init(user, password, address, database):
                                      host=address,
                                      database=database,
                                      auth_plugin='mysql_native_password',
-                                     connect_timeout=1000)
+                                     connect_timeout=1)
     return cnx
 
 

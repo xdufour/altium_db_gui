@@ -1253,6 +1253,7 @@ QTabBar::tab:left:only-one
     border-bottom: 0.04em none #76797c;
     border-left: 0.04em none #76797c;
     background-color: #1c1c1c;
+    padding-top: -0.46em;
     padding-left: 0.23em;
     padding-right: 0.23em;
     padding-bottom: 0.46em;
@@ -1277,13 +1278,13 @@ QTabBar::tab:left:!selected
 QTabBar::tab:left:previous-selected,
 QTabBar::tab:left:previous-selected:!selected:hover
 {
-    border-top-right-radius: 20px;
+    border-top-right-radius: 0.6em;
 }
 
 QTabBar::tab:left:next-selected,
 QTabBar::tab:left:next-selected:!selected:hover
 {
-    border-bottom-right-radius: 20px;
+    border-bottom-right-radius: 0.6em;
 }
 
 QTabBar::tab:left:!selected:hover

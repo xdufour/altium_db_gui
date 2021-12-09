@@ -112,7 +112,7 @@ class App:
         self.tabWidget.setTabIcon(0, homeIcon)
         self.tabWidget.addTab(self.settingsWidget, '')
         self.tabWidget.setTabIcon(1, settingsIcon)
-        self.tabWidget.setIconSize(QtCore.QSize(round(self.textHeight * 2.4), round(self.textHeight * 2.4)))
+        self.tabWidget.setIconSize(QtCore.QSize(round(self.textHeight * 1.8), round(self.textHeight * 1.8)))
 
         # Settings page widgets
         self.settingsVLayout = QVBoxLayout()

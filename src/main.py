@@ -53,13 +53,13 @@ class App:
         app.setWindowIcon(appIcon)
 
         fontDb = QFontDatabase
-        fontId = fontDb.addApplicationFont('../assets/font/Roboto-Regular.ttf')
+        fontId = fontDb.addApplicationFont(':/font/Roboto-Regular.ttf')
+        self.fontSize = 10
         if fontId < 0:
             print("Font not loaded")
         else:
             families = fontDb.applicationFontFamilies(fontId)
             self.fontFamily = families[0]
-            self.fontSize = 10
             print(f"Set application font: {self.fontFamily}")
             app.setFont(QFont(self.fontFamily, self.fontSize))
 

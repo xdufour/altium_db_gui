@@ -64,5 +64,6 @@
 	<file>ui/copy.png</file>
 	<file>ui/delete.png</file>
 	<file>ui/app.ico</file>
+  <file>font/Roboto-Regular.ttf</file>
   </qresource>
 </RCC>

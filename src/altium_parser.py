@@ -4,7 +4,6 @@ import io
 
 
 def getLibraryRefList(filepath):
-    print(filepath)
     _, fileExtension = os.path.splitext(filepath)
     if fileExtension == '.SchLib':
         try:

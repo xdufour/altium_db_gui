@@ -1,5 +1,6 @@
 from PyQt5.QtGui import QIcon
 import os
+import re
 
 
 def loadQIcon(filepath):
@@ -49,3 +50,12 @@ def assignToDict(_dict, key, value):
 def createFolderIfNotExists(folder):
     if not os.path.exists(folder):
         os.makedirs(folder)
+
+
+def matchFromList(pattern, strList) -> list:
+    result = []
+    for s in strList:
+        m = re.match(pattern, s)
+        if m:
+            result.append(m.group())
+    return result

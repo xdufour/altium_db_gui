@@ -19,9 +19,9 @@ from parameter_mapping import ParameterMappingGroupBox
 from executor import Executor
 from main_window import MainWindow
 from statusbar_logger import *
+import re
 
-permanentParams = ["Name", "Supplier 1", "Supplier Part Number 1", "Library Path",
-                   "Library Ref", "Footprint Path", "Footprint Ref"]
+permanentParams = ["Name", "Library Path", "Library Ref", "Footprint Path", "Footprint Ref"]
 
 mysql_login_filename = 'mysql_server_login.json'
 lib_search_path_filename = 'lib_search_path.json'
@@ -74,6 +74,7 @@ class App:
         self.loginInfoDict = {}
         self.dbTableList = []
         self.dbColumnNames = []
+        self.supplierParams = []
         self.cachedTableData = [[]]
         self.dbParamsGroupBox = None
         self.loginInfoDict = {}
@@ -381,7 +382,7 @@ class App:
     def updateCreateComponentFrame(self):
         row = 2
         for column in self.dbColumnNames:
-            if column not in permanentParams:
+            if column not in permanentParams + self.supplierParams:
                 # Delete any previously created widgets
                 nameLower = column.lower()
                 if nameLower in labels:
@@ -392,10 +393,11 @@ class App:
                     del fields[nameLower]
         self.dbColumnNames.clear()
         self.dbColumnNames = mysql_query.getTableColumns(self.cnx, self.tableNameCombobox.currentText())
+        self.supplierParams = utils.matchFromList("Supplier\s*(Part Number)?\s*[1-9]", self.dbColumnNames)
 
         # Create widgets
         for column in self.dbColumnNames:
-            if column not in permanentParams:
+            if column not in permanentParams + self.supplierParams:
                 nameLower = column.lower()
 
                 label = QLabel(column + ":")
@@ -444,7 +446,7 @@ class App:
     def querySupplier(self):
         dkpn = self.ceSupplierPn1LineEdit.text()
         print(f"Querying {self.ceSupplier1Combobox.currentText()} for {dkpn}")
-        result = fetchDigikeyData(dkpn, utils.strippedList(self.dbColumnNames, permanentParams),
+        result = fetchDigikeyData(dkpn, utils.strippedList(self.dbColumnNames, permanentParams + self.supplierParams),
                                   self.dbParamsGroupBox.getParamsDict()[self.tableNameCombobox.currentText()])
         print(result)
         if len(result) == 0:
@@ -553,14 +555,15 @@ class App:
         self.updatePathComboboxes(filepath)
 
     def updatePathComboboxes(self, dirPath):
-        schLibFiles = glob.glob(dirPath + '/**/*.SchLib', recursive=True)
-        pcbLibFiles = glob.glob(dirPath + '/**/*.PcbLib', recursive=True)
-        self.ceLibraryPathCombobox.clear()
-        self.ceFootprintPathCombobox.clear()
-        for f in schLibFiles:
-            self.ceLibraryPathCombobox.addItem(f[f.find('Symbols'):].replace('\\', '/', 255))
-        for f in pcbLibFiles:
-            self.ceFootprintPathCombobox.addItem(f[f.find('Footprints'):].replace('\\', '/', 255))
+        if len(dirPath) > 0:
+            schLibFiles = glob.glob(dirPath + '/**/*.SchLib', recursive=True)
+            pcbLibFiles = glob.glob(dirPath + '/**/*.PcbLib', recursive=True)
+            self.ceLibraryPathCombobox.clear()
+            self.ceFootprintPathCombobox.clear()
+            for f in schLibFiles:
+                self.ceLibraryPathCombobox.addItem(f[f.find('Symbols'):].replace('\\', '/', 255))
+            for f in pcbLibFiles:
+                self.ceFootprintPathCombobox.addItem(f[f.find('Footprints'):].replace('\\', '/', 255))
 
     def updateLibraryRefCombobox(self):
         self.ceLibraryRefCombobox.clear()
@@ -646,7 +649,7 @@ class App:
             unfilteredColumns = mysql_query.getTableColumns(self.cnx, table)
             filteredColumns = []
             for col in unfilteredColumns:
-                if col not in permanentParams and \
+                if col not in permanentParams + self.supplierParams and \
                         col not in ['Description', 'Manufacturer', 'Manufacturer Part Number']:
                     filteredColumns.append(col)
             tablesColumns.append(filteredColumns)

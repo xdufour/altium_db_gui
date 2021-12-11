@@ -243,6 +243,7 @@ class App:
         self.duplicateButton.setDisabled(True)
         self.duplicateButton.setObjectName("DuplicateButton")
         self.duplicateButton.setToolTip("Duplicate selected row")
+        self.duplicateButton.released.connect(self.duplicateDbRow)
         self.actionsHLayout.addWidget(self.duplicateButton)
 
         self.deleteButton = QPushButton()
@@ -620,7 +621,6 @@ class App:
         self.tableWidget.clearSelection()
         self.tableWidget.selectRow(row)
         self.currentSelectedRowPkValue = self.tableWidget.item(row, 0).text()
-        print(f"Row {row} selected, Name: {self.currentSelectedRowPkValue}")
         self.setTableButtonsEnabled(True)
 
     def windowClicked(self, objectName):
@@ -631,6 +631,13 @@ class App:
     def setTableButtonsEnabled(self, state):
         self.duplicateButton.setEnabled(state)
         self.deleteButton.setEnabled(state)
+
+    def duplicateDbRow(self):
+        rowData = [item.text() for item in self.tableWidget.selectedItems()]
+        rowData[0] += '_1'
+        self.setTableButtonsEnabled(False)
+        mysql_query.insertInDatabase(self.cnx, self.tableNameCombobox.currentText(), self.dbColumnNames, rowData)
+        self.updateTableViewFrame()
 
     def deleteDbRow(self):
         msgBox = QMessageBox(QMessageBox.Question, 'Confirm Deletion', f'Permanently delete database entry '

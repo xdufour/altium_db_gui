@@ -1257,7 +1257,7 @@ QTabBar::tab:left:only-one
     padding-left: 0.23em;
     padding-right: 0.23em;
     padding-bottom: 0.46em;
-    min-height: 5px;
+    min-height: 3.2em;
     border-radius: 0.09em;
     border-top-right-radius: 0em;
     border-bottom-right-radius: 0em;

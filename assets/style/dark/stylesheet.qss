@@ -840,11 +840,6 @@ QComboBox
     min-width: 2.5em;
 }
 
-QComboBox:editable
-{
-    background-color: #1d2023;
-}
-
 QPushButton:checked
 {
     background-color: #626568;

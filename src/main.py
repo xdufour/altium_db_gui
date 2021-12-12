@@ -79,7 +79,8 @@ class App:
         self.dbParamsGroupBox = None
         self.loginInfoDict = {}
         self.currentSelectedRowPkValue = ""
-        self.availableSuppliers = ['Digi-Key', 'Mouser']
+        self.availableSuppliers = ['Digi-Key']
+        self.availableAlternateSuppliers = ['Digi-Key', 'Mouser']
 
         self.threadPool = QThreadPool.globalInstance()
 
@@ -167,9 +168,9 @@ class App:
         self.loginGridLayout.addWidget(self.dbNameLabel, 3, 0)
         self.loginGridLayout.addWidget(self.dbNameLineEdit, 3, 2)
 
-        self.dbTestButton = QPushButton("Test")
-        self.loginGridLayout.addWidget(self.dbTestButton, 4, 0, 1, 2)
-        self.dbTestButton.released.connect(self.testDbConnection)
+        self.dbConnectButton = QPushButton("Connect")
+        self.loginGridLayout.addWidget(self.dbConnectButton, 4, 0, 1, 2)
+        self.dbConnectButton.released.connect(self.testDbConnection)
 
         self.dbLoginSaveButton = QPushButton("Save")
         self.dbLoginSaveButton.setEnabled(False)
@@ -290,10 +291,10 @@ class App:
         self.ceSupplier1Label = QLabel("Supplier 1:")
         self.ceGridLayout.addWidget(self.ceSupplier1Label, 1, self.label2Column)
         self.ceSupplier1Combobox = QComboBox()
-        self.ceSupplier1Combobox.addItem("Digi-Key")
+        self.ceSupplier1Combobox.addItems(self.availableSuppliers)
         self.ceSupplier1Combobox.setCurrentIndex(0)
         self.ceSupplier1Combobox.setEditable(True)
-        self.ceSupplier1Combobox.currentTextChanged.connect(self.updateAlternateSupplierComboBox)
+        self.ceSupplier1Combobox.currentTextChanged.connect(self.mainSupplierComboBoxChanged)
         fields['supplier 1'] = self.ceSupplier1Combobox
         self.ceGridLayout.addWidget(self.ceSupplier1Combobox, 1, self.lineEdit2Column, 1, self.lineEditColSpan)
 
@@ -306,19 +307,19 @@ class App:
         fields['supplier part number 1'] = self.ceSupplierPn1LineEdit
         self.ceGridLayout.addWidget(self.ceSupplierPn1LineEdit, 2, self.lineEdit2Column)
 
-        self.ceSupplierPnButton = QPushButton()
-        self.ceSupplierPnButton.setIcon(downloadIcon)
-        self.ceSupplierPnButton.setIconSize(QSize(round(self.textHeight * 1.5), self.textHeight))
-        self.ceSupplierPnButton.setFixedWidth(round(self.textHeight * 2.6))
-        self.ceSupplierPnButton.setToolTip("Query supplier for part number")
-        self.ceSupplierPnButton.released.connect(self.querySupplier)
-        self.ceGridLayout.addWidget(self.ceSupplierPnButton, 2, self.lineEdit2Column + 1, alignment=Qt.AlignRight)
+        self.ceQuerySupplierButton = QPushButton()
+        self.ceQuerySupplierButton.setIcon(downloadIcon)
+        self.ceQuerySupplierButton.setIconSize(QSize(round(self.textHeight * 1.5), self.textHeight))
+        self.ceQuerySupplierButton.setFixedWidth(round(self.textHeight * 2.6))
+        self.ceQuerySupplierButton.setToolTip("Query supplier for part number")
+        self.ceQuerySupplierButton.released.connect(self.querySupplier)
+        self.ceGridLayout.addWidget(self.ceQuerySupplierButton, 2, self.lineEdit2Column + 1, alignment=Qt.AlignRight)
 
         self.ceSupplier2Label = QLabel("Supplier 2:")
         self.ceGridLayout.addWidget(self.ceSupplier2Label, 3, self.label2Column)
         self.ceSupplier2Combobox = QComboBox()
         self.ceSupplier2Combobox.setEditable(True)
-        self.ceSupplier2Combobox.addItems(utils.strippedList(self.availableSuppliers,
+        self.ceSupplier2Combobox.addItems(utils.strippedList(self.availableAlternateSuppliers,
                                                              [self.ceSupplier1Combobox.currentText()]))
         self.ceSupplier2Combobox.setCurrentIndex(0)
         fields['supplier 2'] = self.ceSupplier2Combobox
@@ -372,9 +373,9 @@ class App:
         self.loadLibSearchPath()
 
         self.mainWindow.show()
-        self.applyChangesButton.setMinimumWidth(self.ceSupplierPnButton.width())
-        self.duplicateButton.setMinimumWidth(self.ceSupplierPnButton.width())
-        self.deleteButton.setMinimumWidth(self.ceSupplierPnButton.width())
+        self.applyChangesButton.setMinimumWidth(self.ceQuerySupplierButton.width())
+        self.duplicateButton.setMinimumWidth(self.ceQuerySupplierButton.width())
+        self.deleteButton.setMinimumWidth(self.ceQuerySupplierButton.width())
         self.tableSearchLineEdit.setFixedWidth(max(self.tableWidget.verticalHeader().width() +
                                                    self.tableWidget.columnWidth(0), self.textHeight * 12))
         sys.exit(app.exec())
@@ -450,6 +451,8 @@ class App:
             self.tableWidget.setColumnWidth(i, max([min(headerWidth, maxColumnWidth), min(dataWidth, maxColumnWidth)]))
 
     def querySupplier(self):
+        if not self.ceQuerySupplierButton.isEnabled():
+            return
         pn = self.ceSupplierPn1LineEdit.text()
         print(f"Querying {self.ceSupplier1Combobox.currentText()} for {pn}")
         result = fetchDigikeyData(pn, utils.strippedList(self.dbColumnNames, permanentParams + self.supplierParams),
@@ -464,7 +467,7 @@ class App:
                 fields[columnName.lower()].setText(value)
                 fields[columnName.lower()].setCursorPosition(0)
             except KeyError:
-                print(f"Error: no field found for \'{columnName.lower()}\'")
+                print(f"Warning: no field found for \'{columnName.lower()}\'")
         self.queryAlternateSupplier()
 
     def queryAlternateSupplier(self):
@@ -539,8 +542,8 @@ class App:
                 print("Connected to database successfully")
                 self.loadDbTables()
                 self.createParameterMappingUI()
-                self.dbTestButton.setDisabled(True)
-                self.dbTestButton.setText("Connected")
+                self.dbConnectButton.setDisabled(True)
+                self.dbConnectButton.setText("Connected")
                 self.tabWidget.setTabEnabled(0, True)
             else:
                 self.tabWidget.setTabEnabled(0, False)
@@ -584,10 +587,11 @@ class App:
         self.ceFootprintRefCombobox.addItems(altium_parser.getFootprintRefList(
             self.searchPathLineEdit.text() + '/' + self.ceFootprintPathCombobox.currentText()))
 
-    def updateAlternateSupplierComboBox(self):
+    def mainSupplierComboBoxChanged(self, text):
+        self.ceQuerySupplierButton.setEnabled(text in self.availableSuppliers)
         self.ceSupplier2Combobox.clear()
-        self.ceSupplier2Combobox.addItems(self.ceSupplier2Combobox.addItems(
-            utils.strippedList(self.availableSuppliers, [self.ceSupplier1Combobox.currentText()])))
+        self.ceSupplier2Combobox.addItems(
+            utils.strippedList(self.availableAlternateSuppliers, [text]))
 
     def recordDbEdit(self, row, column):
         primaryKey = 'Name'  # TODO: make adaptable

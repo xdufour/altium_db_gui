@@ -1,5 +1,6 @@
 import os
 import digikey
+import urllib3.exceptions
 
 os.environ['DIGIKEY_CLIENT_ID'] = 'il5UCEPjQRedAgJ6ssO3VJrL3dU65gh0'
 os.environ['DIGIKEY_CLIENT_SECRET'] = 'kcXe6QYpoFQmfZUZ'
@@ -35,7 +36,9 @@ def fetchDigikeyData(digikeyPartNumber, requestedParams, paramDict):
             result.append([column, value])
         return result
     except AttributeError:
-        print("Digi-Key Supplier Part Number API Request Failed")
+        print("Digi-Key API Request Failed: Invalid Part Number")
+    except urllib3.exceptions.MaxRetryError:
+        print("Digi-Key API Request Failed: Failed to establish connection")
     return []
 
 

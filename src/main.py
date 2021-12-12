@@ -10,7 +10,7 @@ import resources
 import utils
 from json_appdata import *
 import mysql_query
-from mysql_query import MySqlEditQueryData
+from mysql_query import MySQLQuery, MySqlEditQueryData
 import mysql.connector.errors as mysql_errors
 import altium_parser
 from dk_api import fetchDigikeyData, fetchDigikeySupplierPN
@@ -68,8 +68,8 @@ class App:
 
         createFolderIfNotExists(os.getenv('APPDATA') + '\\Altium DB GUI\\')
 
-        self.connected = False
-        self.cnx = None
+        self.connectedToDb = False
+        self.mySqlQuery = None
 
         self.loginInfoDict = {}
         self.dbTableList = []
@@ -292,6 +292,8 @@ class App:
         self.ceSupplier1Combobox = QComboBox()
         self.ceSupplier1Combobox.addItem("Digi-Key")
         self.ceSupplier1Combobox.setCurrentIndex(0)
+        self.ceSupplier1Combobox.setEditable(True)
+        self.ceSupplier1Combobox.currentTextChanged.connect(self.updateAlternateSupplierComboBox)
         fields['supplier 1'] = self.ceSupplier1Combobox
         self.ceGridLayout.addWidget(self.ceSupplier1Combobox, 1, self.lineEdit2Column, 1, self.lineEditColSpan)
 
@@ -315,6 +317,7 @@ class App:
         self.ceSupplier2Label = QLabel("Supplier 2:")
         self.ceGridLayout.addWidget(self.ceSupplier2Label, 3, self.label2Column)
         self.ceSupplier2Combobox = QComboBox()
+        self.ceSupplier2Combobox.setEditable(True)
         self.ceSupplier2Combobox.addItems(utils.strippedList(self.availableSuppliers,
                                                              [self.ceSupplier1Combobox.currentText()]))
         self.ceSupplier2Combobox.setCurrentIndex(0)
@@ -377,6 +380,8 @@ class App:
         sys.exit(app.exec())
 
     def loadGUI(self, componentName):
+        if not self.isDbConnectionValid():
+            return
         self.updateCreateComponentFrame()
         self.updateTableViewFrame()
         print(f"Loaded GUI for {componentName}")
@@ -394,7 +399,7 @@ class App:
                     fields[nameLower].deleteLater()
                     del fields[nameLower]
         self.dbColumnNames.clear()
-        self.dbColumnNames = mysql_query.getTableColumns(self.cnx, self.tableNameCombobox.currentText())
+        self.dbColumnNames = self.mySqlQuery.getTableColumns(self.tableNameCombobox.currentText())
         self.supplierParams = utils.matchFromList("Supplier\s*(Part Number)?\s*[1-9]", self.dbColumnNames)
 
         # Create widgets
@@ -414,8 +419,7 @@ class App:
         self.ceNameLineEdit.clear()
 
     def updateTableViewFrame(self):
-        self.cachedTableData = mysql_query.getTableData(self.cnx, self.tableNameCombobox.currentText())
-
+        self.cachedTableData = self.mySqlQuery.getTableData(self.tableNameCombobox.currentText())
         self.tableWidget.setSortingEnabled(False)
         self.tableWidget.clear()
         self.tableWidget.setColumnCount(len(self.dbColumnNames))
@@ -446,9 +450,9 @@ class App:
             self.tableWidget.setColumnWidth(i, max([min(headerWidth, maxColumnWidth), min(dataWidth, maxColumnWidth)]))
 
     def querySupplier(self):
-        dkpn = self.ceSupplierPn1LineEdit.text()
-        print(f"Querying {self.ceSupplier1Combobox.currentText()} for {dkpn}")
-        result = fetchDigikeyData(dkpn, utils.strippedList(self.dbColumnNames, permanentParams + self.supplierParams),
+        pn = self.ceSupplierPn1LineEdit.text()
+        print(f"Querying {self.ceSupplier1Combobox.currentText()} for {pn}")
+        result = fetchDigikeyData(pn, utils.strippedList(self.dbColumnNames, permanentParams + self.supplierParams),
                                   self.dbParamsGroupBox.getParamsDict()[self.tableNameCombobox.currentText()])
         print(result)
         if len(result) == 0:
@@ -478,10 +482,12 @@ class App:
                 self.threadPool.start(executor)
 
     def addToDatabaseClicked(self):
+        if not self.isDbConnectionValid():
+            return
         rowData = []
         for col in self.dbColumnNames:
             rowData.append(utils.getFieldText(fields.get(col.lower(), "")))
-        mysql_query.insertInDatabase(self.cnx, self.tableNameCombobox.currentText(), self.dbColumnNames, rowData)
+        self.mySqlQuery.insertInDatabase(self.tableNameCombobox.currentText(), self.dbColumnNames, rowData)
         self.updateTableViewFrame()
         self.updateCreateComponentFrame()
 
@@ -497,8 +503,17 @@ class App:
             utils.setLineEditValidationState(self.ceNameLineEdit, None)
         self.ceAddButton.setDisabled(len(name) == 0 or nameExists)
 
+    def isDbConnectionValid(self):
+        if self.mySqlQuery.isConnected():
+            return True
+        else:
+            print("Lost connection to MySQL Server")
+            self.connectedToDb = False
+
     def loadDbTables(self):
-        self.dbTableList = mysql_query.getDatabaseTables(self.cnx)
+        if not self.isDbConnectionValid():
+            return
+        self.dbTableList = self.mySqlQuery.getDatabaseTables()
         self.tableNameCombobox.addItems(self.dbTableList)
 
     def loadDbLogins(self):
@@ -514,29 +529,21 @@ class App:
         self.dbLoginSaveButton.setEnabled(False)
 
     def testDbConnection(self):
-        if not self.connected and len(self.loginInfoDict) > 0 and not utils.dictHasEmptyValue(self.loginInfoDict):
-            try:
-                self.cnx = mysql_query.init(self.dbUserLineEdit.text(),
-                                            self.dbPasswordLineEdit.text(),
-                                            self.dbAddressLineEdit.text(),
-                                            self.dbNameLineEdit.text())
-                if self.cnx.is_connected:
-                    self.connected = True
-                    print("Connected to database successfully")
-                    self.loadDbTables()
-                    self.createParameterMappingUI()
-                    self.dbTestButton.setDisabled(True)
-                    self.dbTestButton.setText("Connected")
-                    self.tabWidget.setTabEnabled(0, True)
-            except mysql_errors.ProgrammingError:
-                print("MySQL Server Connection: Access Denied")
-            except mysql_errors.InterfaceError as e:
-                if e.errno == 2003:
-                    print("MySQL Server Connection: Timed out")
-                else:
-                    print(f"MySQL Server Connection: Unknown error (#{e.errno})")
-        if not self.connected:
-            self.tabWidget.setTabEnabled(0, False)
+        if not self.connectedToDb and len(self.loginInfoDict) > 0 and not utils.dictHasEmptyValue(self.loginInfoDict):
+            self.mySqlQuery = MySQLQuery(self.dbUserLineEdit.text(),
+                                         self.dbPasswordLineEdit.text(),
+                                         self.dbAddressLineEdit.text(),
+                                         self.dbNameLineEdit.text())
+            if self.mySqlQuery.isConnected():
+                self.connectedToDb = True
+                print("Connected to database successfully")
+                self.loadDbTables()
+                self.createParameterMappingUI()
+                self.dbTestButton.setDisabled(True)
+                self.dbTestButton.setText("Connected")
+                self.tabWidget.setTabEnabled(0, True)
+            else:
+                self.tabWidget.setTabEnabled(0, False)
 
     def browseBtn(self):
         dialog = QFileDialog()
@@ -577,6 +584,11 @@ class App:
         self.ceFootprintRefCombobox.addItems(altium_parser.getFootprintRefList(
             self.searchPathLineEdit.text() + '/' + self.ceFootprintPathCombobox.currentText()))
 
+    def updateAlternateSupplierComboBox(self):
+        self.ceSupplier2Combobox.clear()
+        self.ceSupplier2Combobox.addItems(self.ceSupplier2Combobox.addItems(
+            utils.strippedList(self.availableSuppliers, [self.ceSupplier1Combobox.currentText()])))
+
     def recordDbEdit(self, row, column):
         primaryKey = 'Name'  # TODO: make adaptable
         columnName = self.tableWidget.horizontalHeaderItem(column).text()
@@ -600,8 +612,10 @@ class App:
             print("Error while finding edit's corresponding primary key")
 
     def applyDbEdits(self):
-        mysql_query.editDatabase(self.cnx, self.loginInfoDict['database'],
-                                 self.tableNameCombobox.currentText(), pendingEditList)
+        if not self.isDbConnectionValid():
+            return
+        self.mySqlQuery.editDatabase(self.loginInfoDict['database'],
+                                     self.tableNameCombobox.currentText(), pendingEditList)
         self.applyChangesButton.setEnabled(False)
         pendingEditList.clear()
         self.updateTableViewFrame()
@@ -634,10 +648,12 @@ class App:
         self.deleteButton.setEnabled(state)
 
     def duplicateDbRow(self):
+        if not self.isDbConnectionValid():
+            return
         rowData = [item.text() for item in self.tableWidget.selectedItems()]
         rowData[0] += '_1'
         self.setTableButtonsEnabled(False)
-        mysql_query.insertInDatabase(self.cnx, self.tableNameCombobox.currentText(), self.dbColumnNames, rowData)
+        self.mySqlQuery.insertInDatabase(self.tableNameCombobox.currentText(), self.dbColumnNames, rowData)
         self.updateTableViewFrame()
 
     def deleteDbRow(self):
@@ -645,16 +661,20 @@ class App:
                                                                        f'\'{self.currentSelectedRowPkValue}\'?')
         msgBox.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
         if msgBox.exec() == QMessageBox.Ok:
+            if not self.isDbConnectionValid():
+                return
             self.setTableButtonsEnabled(False)
-            mysql_query.deleteRowFromDatabase(self.cnx, self.loginInfoDict['database'],
-                                              self.tableNameCombobox.currentText(),
-                                              'Name', self.currentSelectedRowPkValue)
+            self.mySqlQuery.deleteRowFromDatabase(self.loginInfoDict['database'],
+                                                  self.tableNameCombobox.currentText(),
+                                                  'Name', self.currentSelectedRowPkValue)
             self.updateTableViewFrame()
 
     def createParameterMappingUI(self):
+        if not self.isDbConnectionValid():
+            return
         tablesColumns = []
         for table in self.dbTableList:
-            unfilteredColumns = mysql_query.getTableColumns(self.cnx, table)
+            unfilteredColumns = self.mySqlQuery.getTableColumns(table)
             filteredColumns = []
             for col in unfilteredColumns:
                 if col not in permanentParams + self.supplierParams and \

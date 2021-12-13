@@ -784,6 +784,7 @@ QPushButton
 QPushButton[accent=true]
 {
     background-color: #0083ff;
+    border: 0.04em solid #161616;
     color: #1c1c1c;
 }
 
@@ -1541,6 +1542,11 @@ QTreeView::item:!selected:hover
     outline: 0;
     color: #eff0f1;
     padding: 0.04em;
+}
+
+QTableWidget
+{
+    outline: 0;
 }
 
 QSlider::handle:horizontal,

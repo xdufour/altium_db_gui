@@ -263,6 +263,7 @@ class App:
         self.tableWidget.setFont(QFont('Roboto', 9))
         self.tableWidget.setWordWrap(False)
         self.tableWidget.setSortingEnabled(True)
+        self.tableWidget.setFocusPolicy(Qt.ClickFocus)
         self.tableWidget.cellChanged.connect(self.recordDbEdit)
         self.tableWidget.cellClicked.connect(lambda: self.setTableButtonsEnabled(False))
         self.tableWidget.verticalHeader().sectionClicked.connect(self.tableRowClicked)

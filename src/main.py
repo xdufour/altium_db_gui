@@ -18,7 +18,7 @@ from mouser_api import fetchMouserSupplierPN
 from parameter_mapping import ParameterMappingGroupBox
 from executor import Executor
 from main_window import MainWindow
-from statusbar_logger import *
+from statusbar_widget import *
 import re
 
 permanentParams = ["Name", "Library Path", "Library Ref", "Footprint Path", "Footprint Ref"]
@@ -29,7 +29,6 @@ lib_search_path_filename = 'lib_search_path.json'
 labels = {}
 fields = {}
 pendingEditList = []
-
 
 class App:
     def __init__(self):
@@ -85,6 +84,7 @@ class App:
         self.threadPool = QThreadPool.globalInstance()
 
         self.mainLayout = QVBoxLayout()
+        self.mainLayout.setSpacing(0)
         self.mainLayout.setContentsMargins(0, 0, 0, 0)
 
         self.mainWindow = MainWindow()
@@ -94,10 +94,6 @@ class App:
                                        round(screenSize.height() * 0.8))
         app.installEventFilter(self.mainWindow)
         self.mainWindow.mousePressed.connect(self.windowClicked)
-        self.mainWindow.statusBar().setSizeGripEnabled(False)
-        self.mainWindow.statusBar().setMinimumHeight(50)
-        self.mainWindow.statusBar().hide()
-        StatusBarLogger.registerStatusBar(self.mainWindow.statusBar())
 
         self.centralWidget = QWidget()
         self.mainWindow.setCentralWidget(self.centralWidget)
@@ -107,6 +103,9 @@ class App:
         self.tabWidget = QTabWidget()
         self.tabWidget.setTabPosition(QTabWidget.West)
         self.mainLayout.addWidget(self.tabWidget)
+
+        self.statusBar = StatusBar(self.textHeight)
+        self.mainLayout.addWidget(self.statusBar)
 
         self.homeWidget = QWidget()
         self.settingsWidget = QWidget()
@@ -374,6 +373,7 @@ class App:
         self.loadLibSearchPath()
 
         self.mainWindow.show()
+        self.statusBar.setOffsetWidth(self.tabWidget.tabBar().width())
         self.applyChangesButton.setMinimumWidth(self.ceQuerySupplierButton.width())
         self.duplicateButton.setMinimumWidth(self.ceQuerySupplierButton.width())
         self.deleteButton.setMinimumWidth(self.ceQuerySupplierButton.width())
@@ -381,12 +381,12 @@ class App:
                                                    self.tableWidget.columnWidth(0), self.textHeight * 12))
         sys.exit(app.exec())
 
-    def loadGUI(self, componentName):
+    def loadGUI(self, table):
         if not self.isDbConnectionValid():
             return
         self.updateCreateComponentFrame()
         self.updateTableViewFrame()
-        print(f"Loaded GUI for {componentName}")
+        print(f"Loaded GUI for {table}")
 
     def updateCreateComponentFrame(self):
         row = 2
@@ -461,8 +461,12 @@ class App:
         print(result)
         if len(result) == 0:
             utils.setLineEditValidationState(self.ceSupplierPn1LineEdit, False)
+            self.statusBar.setStatus(f"Supplier API Request Failed",
+                                     StatusColor.Red)
         else:
             utils.setLineEditValidationState(self.ceSupplierPn1LineEdit, True)
+            self.statusBar.setStatus(f"Supplier API Request Successful",
+                                     StatusColor.Green)
         for columnName, value in result:
             try:
                 fields[columnName.lower()].setText(value)
@@ -491,7 +495,11 @@ class App:
         rowData = []
         for col in self.dbColumnNames:
             rowData.append(utils.getFieldText(fields.get(col.lower(), "")))
-        self.mySqlQuery.insertInDatabase(self.tableNameCombobox.currentText(), self.dbColumnNames, rowData)
+        result = self.mySqlQuery.insertInDatabase(self.tableNameCombobox.currentText(), self.dbColumnNames, rowData)
+        if result:
+            self.statusBar.setStatus('Component inserted into database successfully', StatusColor.Green)
+        else:
+            self.statusBar.setStatus('Failed to commit new row to database', StatusColor.Red)
         self.updateTableViewFrame()
         self.updateCreateComponentFrame()
 
@@ -511,7 +519,7 @@ class App:
         if self.mySqlQuery.isConnected():
             return True
         else:
-            print("Lost connection to MySQL Server")
+            self.statusBar.setStatus(self.mySqlQuery.errorMsg, StatusColor.Red)
             self.connectedToDb = False
 
     def loadDbTables(self):
@@ -540,13 +548,17 @@ class App:
                                          self.dbNameLineEdit.text())
             if self.mySqlQuery.isConnected():
                 self.connectedToDb = True
-                print("Connected to database successfully")
                 self.loadDbTables()
                 self.createParameterMappingUI()
                 self.dbConnectButton.setDisabled(True)
                 self.dbConnectButton.setText("Connected")
                 self.tabWidget.setTabEnabled(0, True)
+                print("Connected to database successfully")
+                self.statusBar.setStatus(f"Successfully connected to "
+                                         f"{self.dbNameLineEdit.text()} at {self.dbAddressLineEdit.text()}",
+                                         StatusColor.Green)
             else:
+                self.statusBar.setStatus(self.mySqlQuery.errorMsg, StatusColor.Red)
                 self.tabWidget.setTabEnabled(0, False)
 
     def browseBtn(self):
@@ -617,10 +629,15 @@ class App:
             print("Error while finding edit's corresponding primary key")
 
     def applyDbEdits(self):
+        self.statusBar.setStatus('Applying changes...', StatusColor.Default)
         if not self.isDbConnectionValid():
             return
-        self.mySqlQuery.editDatabase(self.loginInfoDict['database'],
-                                     self.tableNameCombobox.currentText(), pendingEditList)
+        result = self.mySqlQuery.editDatabase(self.loginInfoDict['database'],
+                                              self.tableNameCombobox.currentText(), pendingEditList)
+        if result:
+            self.statusBar.setStatus('Changes committed to database successfully', StatusColor.Green)
+        else:
+            self.statusBar.setStatus('Failed to commit one or more changes to database', StatusColor.Red)
         self.applyChangesButton.setEnabled(False)
         pendingEditList.clear()
         self.updateTableViewFrame()
@@ -669,9 +686,14 @@ class App:
             if not self.isDbConnectionValid():
                 return
             self.setTableButtonsEnabled(False)
-            self.mySqlQuery.deleteRowFromDatabase(self.loginInfoDict['database'],
-                                                  self.tableNameCombobox.currentText(),
-                                                  'Name', self.currentSelectedRowPkValue)
+            result = self.mySqlQuery.deleteRowFromDatabase(self.loginInfoDict['database'],
+                                                           self.tableNameCombobox.currentText(),
+                                                           'Name', self.currentSelectedRowPkValue)
+            if result:
+                self.statusBar.setStatus('Row deleted from database successfully', StatusColor.Green)
+            else:
+                self.statusBar.setStatus('Failed to delete row from database', StatusColor.Red)
+
             self.updateTableViewFrame()
 
     def createParameterMappingUI(self):

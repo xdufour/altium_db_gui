@@ -22,34 +22,38 @@ class MySqlEditQueryData:
 class MySQLQuery:
     def __init__(self, user, password, address, database):
         self.cnx = None
+        self.errorMsg = ""
         try:
             self.cnx = connection.MySQLConnection(user=user, password=password,
                                                   host=address,
                                                   database=database,
                                                   auth_plugin='mysql_native_password',
                                                   connect_timeout=1)
+            return
         except ProgrammingError:
-            print("MySQL Server Connection Error: Access Denied")
+            self.errorMsg = "MySQL Server Connection Error: Access Denied"
         except OperationalError:
-            print("MySQL Server Connection Error: Unable to reach server")
+            self.errorMsg = "MySQL Server Connection Error: Unable to reach server"
         except InterfaceError as e:
             if e.errno == 2003:
-                print("MySQL Server Connection Error: Timed out")
+                self.errorMsg = "MySQL Server Connection Error: Timed out"
             else:
-                print(f"MySQL Server Connection Error: Unknown (#{e.errno})")
+                self.errorMsg = "MySQL Server Connection Error: Unknown (#{e.errno})"
+        print(self.errorMsg)
 
     def isConnected(self, attemptReconnect=True):
         connected = False
         if self.cnx is not None:
-            connected = self.cnx.is_connected()
-            if not connected:
-                if attemptReconnect:
-                    try:
-                        self.cnx.connect()
-                        connected = True
-                    except InterfaceError:
-                        print("MySQL Server Connection: Failed to reconnect automatically")
+            try:
+                self.cnx.ping(reconnect=attemptReconnect)
+                connected = True
+            except InterfaceError:
+                self.errorMsg = "MySQL Server Connection: Failed to reconnect automatically"
+                print(self.errorMsg)
         return connected
+
+    def getErrorMessage(self):
+        return self.errorMsg
 
     def getDatabaseTables(self):
         dbTableList = []
@@ -80,6 +84,7 @@ class MySQLQuery:
 
     def insertInDatabase(self, table, headers, data):
         cursor = self.cnx.cursor()
+        result = False
         query = 'INSERT INTO `altium_db_library`.`' + table + "` ("
         for h in headers:
             query += "`" + h + "`, "
@@ -94,11 +99,15 @@ class MySQLQuery:
             cursor.execute(query, data)
             self.cnx.commit()
             print(cursor.rowcount, " record inserted")
+            result = cursor.rowcount
         except ProgrammingError:
-            print("SQL Query Insert Failure")
+            self.errorMsg = "SQL Query Insert Failure"
+            print(self.errorMsg)
+        return result
 
     def editDatabase(self, db, table, editList):
         cursor = self.cnx.cursor()
+        result = True
         for edit in editList:
             query = "UPDATE `" + db + "`.`" + table + "` SET "  # TODO: Refactor to use escape sequences (prevent injection)
             for columnName, value in zip(edit.columnNames, edit.values):
@@ -110,16 +119,25 @@ class MySQLQuery:
                 cursor.execute(query)
                 self.cnx.commit()
                 print(cursor.rowcount, " row(s) affected")
+                if cursor.rowcount < 1:
+                    result = False
             except ProgrammingError:
-                print("SQL Query Update Failure")
+                self.errorMsg = "SQL Query Update Failure"
+                print(self.errorMsg)
+                result = False
+        return result
 
     def deleteRowFromDatabase(self, db, table, primaryKey, pkValue):
         cursor = self.cnx.cursor()
+        result = False
         query = f"DELETE FROM `{db}`.`{table}` WHERE `{primaryKey}` = '{pkValue}'"
         print(f"SQL Query: {query}")
         try:
             cursor.execute(query)
             self.cnx.commit()
             print(cursor.rowcount, " row(s) deleted")
+            result = cursor.rowcount
         except ProgrammingError:
-            print("SQL Query Update Failure")
+            self.errorMsg = "SQL Query Deletion Failure"
+            print(self.errorMsg)
+        return result

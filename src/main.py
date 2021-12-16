@@ -1,7 +1,8 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem, \
-    QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget, QFileDialog, QDialog, QMessageBox
+    QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget, QFileDialog, QDialog, QMessageBox, \
+    QScroller, QScrollerProperties
 from PyQt5 import QtCore, QtGui
-from PyQt5.QtCore import Qt, QFile, QTextStream, QSize, QThreadPool, QEvent
+from PyQt5.QtCore import Qt, QFile, QTextStream, QSize, QThreadPool
 from PyQt5.QtGui import QFont, QFontMetrics, QFontDatabase
 import sys
 import glob
@@ -9,9 +10,7 @@ import glob
 import resources
 import utils
 from json_appdata import *
-import mysql_query
 from mysql_query import MySQLQuery, MySqlEditQueryData
-import mysql.connector.errors as mysql_errors
 import altium_parser
 from dk_api import fetchDigikeyData, fetchDigikeySupplierPN
 from mouser_api import fetchMouserSupplierPN
@@ -19,7 +18,6 @@ from parameter_mapping import ParameterMappingGroupBox
 from executor import Executor
 from main_window import MainWindow
 from statusbar_widget import *
-import re
 
 permanentParams = ["Name", "Library Path", "Library Ref", "Footprint Path", "Footprint Ref"]
 
@@ -264,6 +262,16 @@ class App:
         self.tableWidget.setSortingEnabled(True)
         self.tableWidget.setFocusPolicy(Qt.ClickFocus)
         self.tableWidget.verticalHeader().setDefaultAlignment(Qt.AlignCenter)
+        scrollerProperties = QScrollerProperties()
+        scrollerProperties.setScrollMetric(QScrollerProperties.HorizontalOvershootPolicy,
+                                           QScrollerProperties.OvershootAlwaysOff)
+        scrollerProperties.setScrollMetric(QScrollerProperties.VerticalOvershootPolicy,
+                                           QScrollerProperties.OvershootAlwaysOff)
+        scroller = QScroller.scroller(self.tableWidget.viewport())
+        scroller.setScrollerProperties(scrollerProperties)
+        scroller.grabGesture(self.tableWidget.viewport(), QScroller.TouchGesture)
+        self.tableWidget.setHorizontalScrollMode(QTableWidget.ScrollPerPixel)
+        self.tableWidget.setVerticalScrollMode(QTableWidget.ScrollPerPixel)
         self.tableWidget.cellChanged.connect(self.recordDbEdit)
         self.tableWidget.cellClicked.connect(lambda: self.setTableButtonsEnabled(False))
         self.tableWidget.verticalHeader().sectionClicked.connect(self.tableRowClicked)

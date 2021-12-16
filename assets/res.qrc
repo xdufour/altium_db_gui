@@ -58,6 +58,7 @@
     <file>style/dark/vmovetoolbar.svg</file>
     <file>style/dark/vseptoolbar.svg</file>
 	<file>ui/home.png</file>
+	<file>ui/login.png</file>
 	<file>ui/settings.png</file>
 	<file>ui/download_cloud.png</file>
 	<file>ui/submit.png</file>

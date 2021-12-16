@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QApplication, QWidget, QLabel, QLineEdit, QComboBox, QTableWidget, QTableWidgetItem, \
     QGroupBox, QPushButton, QGridLayout, QHBoxLayout, QVBoxLayout, QTabWidget, QFileDialog, QDialog, QMessageBox, \
-    QScroller, QScrollerProperties
+    QScroller, QScrollerProperties, QCheckBox
 from PyQt5 import QtCore, QtGui
 from PyQt5.QtCore import Qt, QFile, QTextStream, QSize, QThreadPool
 from PyQt5.QtGui import QFont, QFontMetrics, QFontDatabase
@@ -40,6 +40,7 @@ class App:
 
         appIcon = utils.loadQIcon(':/ui/app.ico')
         homeIcon = utils.loadQIcon(':/ui/home.png')
+        loginIcon = utils.loadQIcon(':/ui/login.png')
         settingsIcon = utils.loadQIcon(':/ui/settings.png')
         downloadIcon = utils.loadQIcon(':/ui/download_cloud.png')
         applyIcon = utils.loadQIcon(':/ui/submit.png')
@@ -105,90 +106,17 @@ class App:
         self.statusBar = StatusBar(self.textHeight)
         self.mainLayout.addWidget(self.statusBar)
 
-        self.homeWidget = QWidget()
-        self.settingsWidget = QWidget()
+        self.homeTab = QWidget()
+        self.loginTab = QWidget()
+        self.settingsTab = QWidget()
 
-        self.tabWidget.addTab(self.homeWidget, '')
+        self.tabWidget.addTab(self.homeTab, '')
         self.tabWidget.setTabIcon(0, homeIcon)
-        self.tabWidget.addTab(self.settingsWidget, '')
-        self.tabWidget.setTabIcon(1, settingsIcon)
+        self.tabWidget.addTab(self.loginTab, '')
+        self.tabWidget.setTabIcon(1, loginIcon)
+        self.tabWidget.addTab(self.settingsTab, '')
+        self.tabWidget.setTabIcon(2, settingsIcon)
         self.tabWidget.setIconSize(QtCore.QSize(round(self.textHeight * 2.25), round(self.textHeight * 2.25)))
-
-        # Settings page widgets
-        self.settingsVLayout = QVBoxLayout()
-        self.settingsTopHLayout = QHBoxLayout()
-        self.settingsWidget.setLayout(self.settingsVLayout)
-        self.settingsVLayout.addLayout(self.settingsTopHLayout)
-        self.settingsVLayout.addStretch(1)
-
-        self.loginGroupBox = QGroupBox("MySQL Server Login")
-
-        self.settingsTopLeftVLayout = QVBoxLayout()
-        self.settingsTopHLayout.addLayout(self.settingsTopLeftVLayout)
-        self.settingsTopLeftVLayout.addWidget(self.loginGroupBox, 0)
-        self.settingsTopLeftVLayout.addStretch(1)
-
-        self.loginGridLayout = QGridLayout()
-        self.loginGroupBox.setLayout(self.loginGridLayout)
-        self.loginGridLayout.setColumnMinimumWidth(0, round(self.textHeight * 3.6))
-        self.loginGridLayout.setColumnStretch(0, 1)
-        self.loginGridLayout.setColumnMinimumWidth(1, round(self.textHeight * 3.6))
-        self.loginGridLayout.setColumnStretch(1, 1)
-        self.loginGridLayout.setSpacing(round(self.textHeight * 0.6))
-
-        self.dbAddressLabel = QLabel("Address:")
-        self.dbAddressLineEdit = QLineEdit()
-        self.dbAddressLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'address', s))
-        self.dbAddressLineEdit.textEdited.connect(lambda: self.dbLoginSaveButton.setEnabled(True))
-        self.loginGridLayout.addWidget(self.dbAddressLabel, 0, 0)
-        self.loginGridLayout.addWidget(self.dbAddressLineEdit, 0, 2)
-
-        self.dbUserLabel = QLabel("User:")
-        self.dbUserLineEdit = QLineEdit()
-        self.dbUserLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'user', s))
-        self.dbUserLineEdit.textEdited.connect(lambda: self.dbLoginSaveButton.setEnabled(True))
-        self.loginGridLayout.addWidget(self.dbUserLabel, 1, 0)
-        self.loginGridLayout.addWidget(self.dbUserLineEdit, 1, 2)
-
-        self.dbPasswordLabel = QLabel("Password:")
-        self.dbPasswordLineEdit = QLineEdit()
-        self.dbPasswordLineEdit.setEchoMode(QLineEdit.PasswordEchoOnEdit)
-        self.dbPasswordLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'password', s))
-        self.dbPasswordLineEdit.textEdited.connect(lambda: self.dbLoginSaveButton.setEnabled(True))
-        self.loginGridLayout.addWidget(self.dbPasswordLabel, 2, 0)
-        self.loginGridLayout.addWidget(self.dbPasswordLineEdit, 2, 2)
-
-        self.dbNameLabel = QLabel("Database:")
-        self.dbNameLineEdit = QLineEdit()
-        self.dbNameLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'database', s))
-        self.dbNameLineEdit.textEdited.connect(lambda: self.dbLoginSaveButton.setEnabled(True))
-        self.loginGridLayout.addWidget(self.dbNameLabel, 3, 0)
-        self.loginGridLayout.addWidget(self.dbNameLineEdit, 3, 2)
-
-        self.dbConnectButton = QPushButton("Connect")
-        self.loginGridLayout.addWidget(self.dbConnectButton, 4, 0, 1, 2)
-        self.dbConnectButton.released.connect(self.testDbConnection)
-
-        self.dbLoginSaveButton = QPushButton("Save")
-        self.dbLoginSaveButton.setEnabled(False)
-        self.dbLoginSaveButton.setProperty('accent', True)
-        self.loginGridLayout.addWidget(self.dbLoginSaveButton, 4, 2)
-        self.dbLoginSaveButton.released.connect(self.saveDbLogins)
-
-        self.settingsTopRightVLayout = QVBoxLayout()
-        self.searchPathHLayout = QHBoxLayout()
-        self.settingsTopHLayout.addLayout(self.settingsTopRightVLayout, 1)
-        self.settingsTopRightVLayout.addLayout(self.searchPathHLayout)
-
-        self.searchPathLabel = QLabel("Library Search Path:")
-        self.searchPathHLayout.addWidget(self.searchPathLabel, 0, Qt.AlignLeft)
-        self.searchPathLineEdit = QLineEdit()
-        self.searchPathHLayout.addWidget(self.searchPathLineEdit, 1)
-        self.searchPathButton = QPushButton("Browse")
-        self.searchPathButton.released.connect(self.browseBtn)
-        self.searchPathHLayout.addWidget(self.searchPathButton)
-
-        self.settingsTopRightVLayout.addStretch(1)
 
         # Home page widgets
         self.label1Column = 0
@@ -199,7 +127,7 @@ class App:
         self.lineEditColSpan = 2
 
         self.homeVLayout = QVBoxLayout()
-        self.homeWidget.setLayout(self.homeVLayout)
+        self.homeTab.setLayout(self.homeVLayout)
 
         self.hometopHLayout = QHBoxLayout()
         self.homeVLayout.addLayout(self.hometopHLayout)
@@ -376,6 +304,95 @@ class App:
         self.ceGridLayout.setColumnStretch(self.lineEdit2Column, 1)
         self.ceGridLayout.setColumnMinimumWidth(self.lineEdit2Column + 1, round(self.textHeight * 2.5))
         self.ceGridLayout.setColumnMinimumWidth(self.lineEdit1Column + 1, round(self.textHeight * 2.5))
+
+        # Login page widgets
+        self.loginHLayout = QHBoxLayout()
+        self.loginTab.setLayout(self.loginHLayout)
+
+        self.connectionGLayout = QGridLayout()
+
+        self.userPrivilegesGroupBox = QGroupBox("Current User Privileges")
+        self.userPrivilegesGLayout = QGridLayout()
+        self.userPrivilegesGroupBox.setLayout(self.userPrivilegesGLayout)
+
+        self.loginHLayout.addLayout(self.connectionGLayout)
+        self.loginHLayout.addWidget(self.userPrivilegesGroupBox)
+
+        # Settings page widgets
+        self.settingsVLayout = QVBoxLayout()
+        self.settingsTopHLayout = QHBoxLayout()
+        self.settingsTab.setLayout(self.settingsVLayout)
+        self.settingsVLayout.addLayout(self.settingsTopHLayout)
+        self.settingsVLayout.addStretch(1)
+
+        self.loginGroupBox = QGroupBox("MySQL Server Login")
+
+        self.settingsTopLeftVLayout = QVBoxLayout()
+        self.settingsTopHLayout.addLayout(self.settingsTopLeftVLayout)
+        self.settingsTopLeftVLayout.addWidget(self.loginGroupBox, 0)
+        self.settingsTopLeftVLayout.addStretch(1)
+
+        self.loginGridLayout = QGridLayout()
+        self.loginGroupBox.setLayout(self.loginGridLayout)
+        self.loginGridLayout.setColumnMinimumWidth(0, round(self.textHeight * 3.6))
+        self.loginGridLayout.setColumnStretch(0, 1)
+        self.loginGridLayout.setColumnMinimumWidth(1, round(self.textHeight * 3.6))
+        self.loginGridLayout.setColumnStretch(1, 1)
+        self.loginGridLayout.setSpacing(round(self.textHeight * 0.6))
+
+        self.dbAddressLabel = QLabel("Address:")
+        self.dbAddressLineEdit = QLineEdit()
+        self.dbAddressLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'address', s))
+        self.dbAddressLineEdit.textEdited.connect(lambda: self.dbLoginSaveButton.setEnabled(True))
+        self.loginGridLayout.addWidget(self.dbAddressLabel, 0, 0)
+        self.loginGridLayout.addWidget(self.dbAddressLineEdit, 0, 2)
+
+        self.dbUserLabel = QLabel("User:")
+        self.dbUserLineEdit = QLineEdit()
+        self.dbUserLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'user', s))
+        self.dbUserLineEdit.textEdited.connect(lambda: self.dbLoginSaveButton.setEnabled(True))
+        self.loginGridLayout.addWidget(self.dbUserLabel, 1, 0)
+        self.loginGridLayout.addWidget(self.dbUserLineEdit, 1, 2)
+
+        self.dbPasswordLabel = QLabel("Password:")
+        self.dbPasswordLineEdit = QLineEdit()
+        self.dbPasswordLineEdit.setEchoMode(QLineEdit.PasswordEchoOnEdit)
+        self.dbPasswordLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'password', s))
+        self.dbPasswordLineEdit.textEdited.connect(lambda: self.dbLoginSaveButton.setEnabled(True))
+        self.loginGridLayout.addWidget(self.dbPasswordLabel, 2, 0)
+        self.loginGridLayout.addWidget(self.dbPasswordLineEdit, 2, 2)
+
+        self.dbNameLabel = QLabel("Database:")
+        self.dbNameLineEdit = QLineEdit()
+        self.dbNameLineEdit.textChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'database', s))
+        self.dbNameLineEdit.textEdited.connect(lambda: self.dbLoginSaveButton.setEnabled(True))
+        self.loginGridLayout.addWidget(self.dbNameLabel, 3, 0)
+        self.loginGridLayout.addWidget(self.dbNameLineEdit, 3, 2)
+
+        self.dbConnectButton = QPushButton("Connect")
+        self.loginGridLayout.addWidget(self.dbConnectButton, 4, 0, 1, 2)
+        self.dbConnectButton.released.connect(self.testDbConnection)
+
+        self.dbLoginSaveButton = QPushButton("Save")
+        self.dbLoginSaveButton.setEnabled(False)
+        self.dbLoginSaveButton.setProperty('accent', True)
+        self.loginGridLayout.addWidget(self.dbLoginSaveButton, 4, 2)
+        self.dbLoginSaveButton.released.connect(self.saveDbLogins)
+
+        self.settingsTopRightVLayout = QVBoxLayout()
+        self.searchPathHLayout = QHBoxLayout()
+        self.settingsTopHLayout.addLayout(self.settingsTopRightVLayout, 1)
+        self.settingsTopRightVLayout.addLayout(self.searchPathHLayout)
+
+        self.searchPathLabel = QLabel("Library Search Path:")
+        self.searchPathHLayout.addWidget(self.searchPathLabel, 0, Qt.AlignLeft)
+        self.searchPathLineEdit = QLineEdit()
+        self.searchPathHLayout.addWidget(self.searchPathLineEdit, 1)
+        self.searchPathButton = QPushButton("Browse")
+        self.searchPathButton.released.connect(self.browseBtn)
+        self.searchPathHLayout.addWidget(self.searchPathButton)
+
+        self.settingsTopRightVLayout.addStretch(1)
 
         self.loadDbLogins()
         self.testDbConnection()
@@ -559,6 +576,7 @@ class App:
                 self.connectedToDb = True
                 self.loadDbTables()
                 self.createParameterMappingUI()
+                self.updateUserPrivilegesUI()
                 self.dbConnectButton.setDisabled(True)
                 self.dbConnectButton.setText("Connected")
                 self.tabWidget.setTabEnabled(0, True)
@@ -719,6 +737,18 @@ class App:
         self.settingsTopRightVLayout.takeAt(1)
         self.settingsTopRightVLayout.addWidget(self.dbParamsGroupBox)
         self.settingsTopRightVLayout.addStretch(1)
+
+    def updateUserPrivilegesUI(self):
+        if not self.isDbConnectionValid():
+            return
+        privileges = self.mySqlQuery.getUserGrants()
+        row = 0
+        for p in privileges:
+            checkbox = QCheckBox(p)
+            checkbox.setChecked(True)
+            self.userPrivilegesGLayout.addWidget(checkbox, row, 0)
+            row += 1
+        self.userPrivilegesGLayout.setRowStretch(row, 1)
 
 
 if __name__ == "__main__":

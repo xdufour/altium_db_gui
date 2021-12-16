@@ -32,7 +32,6 @@ class MySQLQuery:
                                                   database=database,
                                                   auth_plugin='mysql_native_password',
                                                   connect_timeout=1)
-            self.getUserGrants()
             return
         except ProgrammingError:
             self.errorMsg = "MySQL Server Connection Error: Access Denied"

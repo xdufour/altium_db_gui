@@ -57,7 +57,7 @@ class App:
         else:
             families = fontDb.applicationFontFamilies(fontId)
             self.fontFamily = families[0]
-            print(f"Set application font: {self.fontFamily}")
+            print(f"Set application font: {self.fontFamily}, {self.fontSize}pt")
             app.setFont(QFont(self.fontFamily, self.fontSize))
 
         fm = QFontMetrics(QFont(self.fontFamily, self.fontSize))
@@ -641,8 +641,7 @@ class App:
         self.statusBar.setStatus('Applying changes...', StatusColor.Default)
         if not self.isDbConnectionValid():
             return
-        result = self.mySqlQuery.editDatabase(self.loginInfoDict['database'],
-                                              self.tableNameCombobox.currentText(), pendingEditList)
+        result = self.mySqlQuery.editDatabase(self.tableNameCombobox.currentText(), pendingEditList)
         if result:
             self.statusBar.setStatus('Changes committed to database successfully', StatusColor.Green)
         else:
@@ -695,8 +694,7 @@ class App:
             if not self.isDbConnectionValid():
                 return
             self.setTableButtonsEnabled(False)
-            result = self.mySqlQuery.deleteRowFromDatabase(self.loginInfoDict['database'],
-                                                           self.tableNameCombobox.currentText(),
+            result = self.mySqlQuery.deleteRowFromDatabase(self.tableNameCombobox.currentText(),
                                                            'Name', self.currentSelectedRowPkValue)
             if result:
                 self.statusBar.setStatus('Row deleted from database successfully', StatusColor.Green)

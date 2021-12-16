@@ -19,8 +19,11 @@ class MySqlEditQueryData:
             f"Pending update created amended: {columnName} = {value} for primaryKey {self.primaryKey} = {self.pkValue}")
 
 
+# noinspection SqlNoDataSourceInspection,SqlDialectInspection
 class MySQLQuery:
     def __init__(self, user, password, address, database):
+        self.user = user
+        self.db = database
         self.cnx = None
         self.errorMsg = ""
         try:
@@ -29,6 +32,7 @@ class MySQLQuery:
                                                   database=database,
                                                   auth_plugin='mysql_native_password',
                                                   connect_timeout=1)
+            self.getUserGrants()
             return
         except ProgrammingError:
             self.errorMsg = "MySQL Server Connection Error: Access Denied"
@@ -55,10 +59,19 @@ class MySQLQuery:
     def getErrorMessage(self):
         return self.errorMsg
 
+    def getUserGrants(self):
+        cursor = self.cnx.cursor()
+        query = f"SHOW GRANTS FOR `{self.user}`@`%`;"
+        cursor.execute(query)
+        result = str(cursor.fetchone())
+        result = result.replace("('GRANT ", "").replace(f"ON *.* TO `{self.user}`@`%`',)", "")
+        grants = result.split(', ')
+        return grants
+
     def getDatabaseTables(self):
         dbTableList = []
         cursor = self.cnx.cursor()
-        query = "SHOW TABLES FROM `altium_db_library`"
+        query = f"SHOW TABLES FROM `{self.db}`"
         print("SQL Query: " + query)
         cursor.execute(query)
         for table in cursor:
@@ -68,7 +81,7 @@ class MySQLQuery:
     def getTableColumns(self, table):
         dbTableColumnList = []
         cursor = self.cnx.cursor()
-        query = "SHOW COLUMNS FROM `altium_db_library`.`" + table + "`"
+        query = f"SHOW COLUMNS FROM `{self.db}`.`{table}`"
         print("SQL Query: " + query)
         cursor.execute(query)
         for column in cursor:
@@ -77,7 +90,7 @@ class MySQLQuery:
 
     def getTableData(self, table):
         cursor = self.cnx.cursor()
-        query = "SELECT * FROM `altium_db_library`.`" + table + "`"
+        query = f"SELECT * FROM `{self.db}`.`{table}`"
         print("SQL Query: " + query)
         cursor.execute(query)
         return cursor.fetchall()
@@ -85,12 +98,12 @@ class MySQLQuery:
     def insertInDatabase(self, table, headers, data):
         cursor = self.cnx.cursor()
         result = False
-        query = 'INSERT INTO `altium_db_library`.`' + table + "` ("
+        query = f"INSERT INTO `{self.db}`.`{table}` ("
         for h in headers:
             query += "`" + h + "`, "
         query = query[:len(query) - 2]
         query += ") VALUES ("
-        for d in data:
+        for _ in data:
             query += "%s, "
         query = query[:len(query) - 2]
         query += ")"
@@ -105,11 +118,11 @@ class MySQLQuery:
             print(self.errorMsg)
         return result
 
-    def editDatabase(self, db, table, editList):
+    def editDatabase(self, table, editList):
         cursor = self.cnx.cursor()
         result = True
         for edit in editList:
-            query = "UPDATE `" + db + "`.`" + table + "` SET "  # TODO: Refactor to use escape sequences (prevent injection)
+            query = f"UPDATE `{self.db}`.`{table}` SET "  # TODO: Refactor to use escape sequences (prevent injection)
             for columnName, value in zip(edit.columnNames, edit.values):
                 query += "`" + columnName + "` = '" + value + "', "
             query = query[:len(query) - 2]
@@ -127,10 +140,10 @@ class MySQLQuery:
                 result = False
         return result
 
-    def deleteRowFromDatabase(self, db, table, primaryKey, pkValue):
+    def deleteRowFromDatabase(self, table, primaryKey, pkValue):
         cursor = self.cnx.cursor()
         result = False
-        query = f"DELETE FROM `{db}`.`{table}` WHERE `{primaryKey}` = '{pkValue}'"
+        query = f"DELETE FROM `{self.db}`.`{table}` WHERE `{primaryKey}` = '{pkValue}'"
         print(f"SQL Query: {query}")
         try:
             cursor.execute(query)

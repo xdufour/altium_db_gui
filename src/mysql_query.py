@@ -1,5 +1,6 @@
 from mysql.connector import connection
 from mysql.connector.errors import ProgrammingError, OperationalError, InterfaceError
+from mysql.connector.locales.eng import client_error
 
 
 class MySqlEditQueryData:

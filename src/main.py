@@ -463,6 +463,7 @@ class App:
     def querySupplier(self):
         if not self.ceQuerySupplierButton.isEnabled():
             return
+        self.statusBar.setStatus(f"Querying supplier for component attributes...", StatusColor.Default)
         pn = self.ceSupplierPn1LineEdit.text()
         print(f"Querying {self.ceSupplier1Combobox.currentText()} for {pn}")
         result = fetchDigikeyData(pn, utils.strippedList(self.dbColumnNames, permanentParams + self.supplierParams),

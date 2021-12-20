@@ -3,6 +3,9 @@
     <module name="altium_db_gui" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="PARENT_ENVS" value="true" />
+    <envs>
+      <env name="PYTHONUNBUFFERED" value="1" />
+    </envs>
     <option name="SDK_HOME" value="" />
     <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$/src" />
     <option name="IS_MODULE_SDK" value="true" />
@@ -17,7 +20,7 @@
     <option name="REDIRECT_INPUT" value="false" />
     <option name="INPUT_FILE" value="" />
     <method v="2">
-      <option name="ToolBeforeRunTask" enabled="true" actionId="Tool_External Tools_generate_resources" />
+      <option name="ToolBeforeRunTask" enabled="true" actionId="Tool_External Tools_make_resources" />
     </method>
   </configuration>
 </component>

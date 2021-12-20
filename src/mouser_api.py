@@ -9,6 +9,12 @@ from bs4 import BeautifulSoup
 BASE_URL = 'https://api.mouser.com/api/v1.0'
 os.environ['MOUSER_PART_API_KEY'] = '985e159d-3352-4bf8-a066-6dcf2cd58ad6'
 
+userAgentList = [
+    "Mozilla/5.0",
+    "Chrome/96.0.4664.110",
+    "Safari/537.36"
+]
+
 
 def get_api_keys(filename=None):
     """ Mouser API Keys """
@@ -218,58 +224,89 @@ def fetchMouserSupplierPN(manufacturerPartNumber):
 
 
 def fetchMouserData(mouserPartNumber, requestedParams, paramDict):
-    headers = {'User-Agent': 'Chrome/96.0.4664.110'}
     url = f"https://www.mouser.ca/c/?q={mouserPartNumber}"
-    r = requests.get(url, headers=headers)
 
     result = []
     paramList = []
     valueList = []
     scrapedDict = {}
     mouserDataDict = {}
+    requestSuccess = False
 
-    soup = BeautifulSoup(r.text, 'lxml')
-    table = soup.find("table", {"class": "table persist-area SearchResultsTable"})
+    for u in userAgentList:
+        requestHeader = {'User-Agent': u}
+        r = requests.get(url, headers=requestHeader)
+        if r.status_code == 200:
+            requestSuccess = True
+            print(u)
+            break
 
-    header = table.find("tr", {"class": "headerRow persist-header"})
-    body = table.find("tbody")
-    row = body.find("tr", recursive=False)
+    if not requestSuccess:
+        print("Mouser Web Scraping Failed: Access Forbidden")
+        return []
 
-    print(row.attrs)
+    try:
+        soup = BeautifulSoup(r.text, 'lxml')
+        table = soup.find("table", {"class": "table persist-area SearchResultsTable"})
+        if table is not None:  # Mouser found multiple entries, parse search results and use 1st row
+            header = table.find("tr", {"class": "headerRow persist-header"})
+            body = table.find("tbody")
+            row = body.find("tr", recursive=False)
+            params = header.find_all("th")
+            values = row.find_all("td", recursive=False)
+            scrapedDict['Manufacturer'] = row.attrs.get('data-actualmfrname')
+            scrapedDict['Manufacturer Part Number'] = row.attrs.get('data-mfrpartnumber')
+            for p in params:
+                paramList.append(utils.strReplaceMultiple(p.text.strip(), ['\n', '\r'], ''))
+            for v in values:
+                valueList.append(utils.strReplaceMultiple(v.text.strip(), ['\n', '\r'], ''))
+        else:  # Mouser found unique match, parse component specs table
+            table = soup.find("table", {"class": "specs-table"})
+            rows = table.find_all("tr")
+            desc = soup.find("span", {"id": "spnDescription"})
+            mfg = soup.find("a", {"id": "lnkManufacturerName"})
+            mfgPn = soup.find("span", {"id": "spnManufacturerPartNumber"})
+            if desc is not None:
+                scrapedDict['Description'] = desc.text.strip()
+            if mfg is not None:
+                scrapedDict['Manufacturer'] = mfg.text.strip()
+            if mfgPn is not None:
+                scrapedDict['Manufacturer Part Number'] = mfgPn.text.strip()
+            for r in rows:
+                p = r.find("td", {"class": "attr-col"})
+                v = r.find("td", {"class": "attr-value-col"})
+                if p is not None and v is not None:
+                    paramList.append(utils.strReplaceMultiple(p.text.strip(), ['\n', '\r', ':'], ''))
+                    valueList.append(utils.strReplaceMultiple(v.text.strip(), ['\n', '\r'], ''))
 
-    params = header.find_all("th")
-    values = row.find_all("td", recursive=False)
+        for i, pText in enumerate(paramList):
+            scrapedDict[pText] = valueList[i]
 
-    for p in params:
-        paramList.append(utils.strReplaceMultiple(p.text.strip(), ['\n', '\r'], ''))
-    for v in values:
-        valueList.append(utils.strReplaceMultiple(v.text.strip(), ['\n', '\r'], ''))
+        paramDict = dict((v, k) for k, v in paramDict.items())
 
-    print(f"{len(paramList), len(valueList)}")
-    for i, pText in enumerate(paramList):
-        scrapedDict[pText] = valueList[i]
+        for param in scrapedDict:
+            value = scrapedDict[param]
+            if param in paramDict:
+                mouserDataDict[paramDict[param]] = value
 
-    for p in scrapedDict:
-        print(f"{p}, {scrapedDict[p]}")
+        for column in requestedParams:
+            if column == "Description":
+                value = scrapedDict.get(column).replace('Learn More', '')
+            elif column == "Manufacturer Part Number":
+                value = scrapedDict.get(column)
+            elif column == "Manufacturer":
+                value = scrapedDict.get(column)
+            elif column == "Unit Price":
+                value = 'N/A'
+            else:
+                value = mouserDataDict.get(column, "")
+            result.append([column, value])
 
-    paramDict = dict((v, k) for k, v in paramDict.items())
+        return result
+    except AttributeError:
+        print("Mouser Web Scraping Failed: Invalid Part Number")
+    return []
 
-    for param in scrapedDict:
-        value = scrapedDict[param]
-        if param in paramDict:
-            mouserDataDict[paramDict[param]] = value
 
-    for column in requestedParams:
-        if column == "Description":
-            value = scrapedDict.get("Description").replace('Learn More', '')
-        elif column == "Manufacturer Part Number":
-            value = row.attrs.get('data-mfrpartnumber')
-        elif column == "Manufacturer":
-            value = row.attrs.get('data-actualmfrname')
-        elif column == "Unit Price":
-            value = 'N/A'
-        else:
-            value = mouserDataDict.get(column, "")
-        result.append([column, value])
-    return result
+
 

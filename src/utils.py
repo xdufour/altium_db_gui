@@ -59,3 +59,10 @@ def matchFromList(pattern, strList) -> list:
         if m:
             result.append(m.group())
     return result
+
+
+def strReplaceMultiple(string: str, charList, charNew) -> str:
+    newStr = string
+    for c in charList:
+        newStr = newStr.replace(c, charNew)
+    return newStr

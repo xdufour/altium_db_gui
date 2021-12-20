@@ -2,8 +2,8 @@ import os
 import csv
 import json
 import requests
-from PyQt5 import QtCore
-from PyQt5.QtCore import QRunnable, QObject
+import utils
+from bs4 import BeautifulSoup
 
 # Mouser Base URL
 BASE_URL = 'https://api.mouser.com/api/v1.0'
@@ -215,3 +215,61 @@ def fetchMouserSupplierPN(manufacturerPartNumber):
     except KeyError:
         print(f"No Mouser Part Number found for {manufacturerPartNumber}")
     return supplierPN
+
+
+def fetchMouserData(mouserPartNumber, requestedParams, paramDict):
+    headers = {'User-Agent': 'Chrome/96.0.4664.110'}
+    url = f"https://www.mouser.ca/c/?q={mouserPartNumber}"
+    r = requests.get(url, headers=headers)
+
+    result = []
+    paramList = []
+    valueList = []
+    scrapedDict = {}
+    mouserDataDict = {}
+
+    soup = BeautifulSoup(r.text, 'lxml')
+    table = soup.find("table", {"class": "table persist-area SearchResultsTable"})
+
+    header = table.find("tr", {"class": "headerRow persist-header"})
+    body = table.find("tbody")
+    row = body.find("tr", recursive=False)
+
+    print(row.attrs)
+
+    params = header.find_all("th")
+    values = row.find_all("td", recursive=False)
+
+    for p in params:
+        paramList.append(utils.strReplaceMultiple(p.text.strip(), ['\n', '\r'], ''))
+    for v in values:
+        valueList.append(utils.strReplaceMultiple(v.text.strip(), ['\n', '\r'], ''))
+
+    print(f"{len(paramList), len(valueList)}")
+    for i, pText in enumerate(paramList):
+        scrapedDict[pText] = valueList[i]
+
+    for p in scrapedDict:
+        print(f"{p}, {scrapedDict[p]}")
+
+    paramDict = dict((v, k) for k, v in paramDict.items())
+
+    for param in scrapedDict:
+        value = scrapedDict[param]
+        if param in paramDict:
+            mouserDataDict[paramDict[param]] = value
+
+    for column in requestedParams:
+        if column == "Description":
+            value = scrapedDict.get("Description").replace('Learn More', '')
+        elif column == "Manufacturer Part Number":
+            value = row.attrs.get('data-mfrpartnumber')
+        elif column == "Manufacturer":
+            value = row.attrs.get('data-actualmfrname')
+        elif column == "Unit Price":
+            value = 'N/A'
+        else:
+            value = mouserDataDict.get(column, "")
+        result.append([column, value])
+    return result
+

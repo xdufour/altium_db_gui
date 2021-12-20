@@ -13,7 +13,7 @@ from json_appdata import *
 from mysql_query import MySQLQuery, MySqlEditQueryData
 import altium_parser
 from dk_api import fetchDigikeyData, fetchDigikeySupplierPN
-from mouser_api import fetchMouserSupplierPN
+from mouser_api import fetchMouserData, fetchMouserSupplierPN
 from parameter_mapping import ParameterMappingGroupBox
 from executor import Executor
 from main_window import MainWindow
@@ -76,7 +76,7 @@ class App:
         self.dbParamsGroupBox = None
         self.loginInfoDict = {}
         self.currentSelectedRowPkValue = ""
-        self.availableSuppliers = ['Digi-Key']
+        self.availableSuppliers = ['Digi-Key', 'Mouser']
         self.availableAlternateSuppliers = ['Digi-Key', 'Mouser']
 
         self.threadPool = QThreadPool.globalInstance()
@@ -461,13 +461,18 @@ class App:
             self.tableWidget.setColumnWidth(i, max([min(headerWidth, maxColumnWidth), min(dataWidth, maxColumnWidth)]))
 
     def querySupplier(self):
+        result = []
         if not self.ceQuerySupplierButton.isEnabled():
             return
         self.statusBar.setStatus(f"Querying supplier for component attributes...", StatusColor.Default)
         pn = self.ceSupplierPn1LineEdit.text()
         print(f"Querying {self.ceSupplier1Combobox.currentText()} for {pn}")
-        result = fetchDigikeyData(pn, utils.strippedList(self.dbColumnNames, permanentParams + self.supplierParams),
-                                  self.dbParamsGroupBox.getParamsDict()[self.tableNameCombobox.currentText()])
+        if self.ceSupplier1Combobox.currentText() == 'Digi-Key':
+            result = fetchDigikeyData(pn, utils.strippedList(self.dbColumnNames, permanentParams + self.supplierParams),
+                                      self.dbParamsGroupBox.getParamsDict()[self.tableNameCombobox.currentText()])
+        elif self.ceSupplier1Combobox.currentText() == 'Mouser':
+            result = fetchMouserData(pn, utils.strippedList(self.dbColumnNames, permanentParams + self.supplierParams),
+                                     self.dbParamsGroupBox.getParamsDict()[self.tableNameCombobox.currentText()])
         print(result)
         if len(result) == 0:
             utils.setLineEditValidationState(self.ceSupplierPn1LineEdit, False)

@@ -20,13 +20,13 @@ AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
 DefaultDirName={autopf}\{#MyAppName}
 DisableProgramGroupPage=yes
-LicenseFile=E:\git\altium_db_gui\LICENSE
+LicenseFile=..\LICENSE
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
-OutputDir=E:\git\altium_db_gui\installer
+OutputDir=..\installer
 OutputBaseFilename=altium_db_gui_setup
-SetupIconFile=E:\git\altium_db_gui\assets\ui\app.ico
+SetupIconFile=..\assets\ui\app.ico
 Compression=lzma
 SolidCompression=yes
 WizardStyle=modern
@@ -38,7 +38,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "E:\git\altium_db_gui\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Icons]

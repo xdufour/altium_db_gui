@@ -28,6 +28,7 @@ labels = {}
 fields = {}
 pendingEditList = []
 
+
 class App:
     def __init__(self):
         app = QApplication(sys.argv)
@@ -471,11 +472,15 @@ class App:
         if self.ceSupplier1Combobox.currentText() == 'Digi-Key':
             result, errorMsg = fetchDigikeyData(pn, utils.strippedList(self.dbColumnNames,
                                                                        permanentParams + self.supplierParams),
-                                      self.dbParamsGroupBox.getParamsDict()[self.tableNameCombobox.currentText()])
+                                                self.dbParamsGroupBox.getParamsDict(
+                                                    self.ceSupplier1Combobox.currentText(),
+                                                    self.tableNameCombobox.currentText()))
         elif self.ceSupplier1Combobox.currentText() == 'Mouser':
             result, errorMsg = fetchMouserData(pn, utils.strippedList(self.dbColumnNames,
                                                                       permanentParams + self.supplierParams),
-                                     self.dbParamsGroupBox.getParamsDict()[self.tableNameCombobox.currentText()])
+                                               self.dbParamsGroupBox.getParamsDict(
+                                                   self.ceSupplier1Combobox.currentText(),
+                                                   self.tableNameCombobox.currentText()))
         print(result)
         if len(result) == 0:
             utils.setLineEditValidationState(self.ceSupplierPn1LineEdit, False)
@@ -483,7 +488,7 @@ class App:
                                      StatusColor.Red)
         else:
             utils.setLineEditValidationState(self.ceSupplierPn1LineEdit, True)
-            self.statusBar.setStatus(f"Supplier API Request Successful",
+            self.statusBar.setStatus(f"Supplier Request Successful",
                                      StatusColor.Green)
         for columnName, value in result:
             try:
@@ -724,7 +729,7 @@ class App:
                         col not in ['Description', 'Manufacturer', 'Manufacturer Part Number']:
                     filteredColumns.append(col)
             tablesColumns.append(filteredColumns)
-        self.dbParamsGroupBox = ParameterMappingGroupBox(self.dbTableList, tablesColumns, ['Digi-Key'])
+        self.dbParamsGroupBox = ParameterMappingGroupBox(self.dbTableList, tablesColumns, self.availableSuppliers)
         self.settingsTopRightVLayout.takeAt(1)
         self.settingsTopRightVLayout.addWidget(self.dbParamsGroupBox)
         self.settingsTopRightVLayout.addStretch(1)

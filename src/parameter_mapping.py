@@ -20,10 +20,12 @@ class ParameterMappingGroupBox(QGroupBox):
         fm = QFontMetrics(QFont(QtGui.QGuiApplication.font().family(), QtGui.QGuiApplication.font().pointSize()))
         self.textHeight = fm.boundingRect("Text").height()
 
-        for i, table in enumerate(tableList):
-            self.paramsDicts[table] = {}
-            for dbColumnName in tableColumnsList[i]:
-                self.paramsDicts[table][dbColumnName] = dbColumnName
+        for supplier in supplierList:
+            self.paramsDicts[supplier] = {}
+            for i, table in enumerate(tableList):
+                self.paramsDicts[supplier][table] = {}
+                for dbParam in tableColumnsList[i]:
+                    self.paramsDicts[supplier][table][dbParam] = dbParam
 
         self.dbParamsColumn = 0
         self.equalsLabelColumn = 2
@@ -43,7 +45,6 @@ class ParameterMappingGroupBox(QGroupBox):
         self.tableListComboBox.addItems(tableList)
         self.tableListComboBox.setCurrentIndex(0)
         self.tableListComboBox.currentTextChanged.connect(self.updateTableMappingFields)
-        self.tableListComboBox.currentTextChanged.connect(lambda: self.saveButton.setEnabled(False))
         self.mainGridLayout.addWidget(self.tableListComboBox, self.comboBoxRow, self.dbParamsColumn + 1)
 
         self.supplierTableLabel = QLabel("Supplier:")
@@ -51,6 +52,7 @@ class ParameterMappingGroupBox(QGroupBox):
 
         self.supplierListComboBox = QComboBox()
         self.supplierListComboBox.addItems(supplierList)
+        self.supplierListComboBox.currentTextChanged.connect(self.updateTableMappingFields)
         self.mainGridLayout.addWidget(self.supplierListComboBox, self.comboBoxRow, self.supplierParamsColumn + 1)
         self.mainGridLayout.setSpacing(self.textHeight * 0.6)
         self.mainGridLayout.setColumnMinimumWidth(2, self.textHeight * 3)
@@ -71,6 +73,8 @@ class ParameterMappingGroupBox(QGroupBox):
 
     def updateTableMappingFields(self):
         row = self.fieldsRow
+        supplier = self.supplierListComboBox.currentText()
+        table = self.tableListComboBox.currentText()
 
         for label in labels:
             label.deleteLater()
@@ -85,18 +89,20 @@ class ParameterMappingGroupBox(QGroupBox):
 
         self.mainGridLayout.takeAt(self.mainGridLayout.indexOf(self.saveButton))
 
-        for columnName in self.tableColumnsList[self.tableListComboBox.currentIndex()]:
-            dbLineEdit = QLineEdit(columnName)
+        for param in self.tableColumnsList[self.tableListComboBox.currentIndex()]:
+            dbLineEdit = QLineEdit(param)
             dbLineEdit.setReadOnly(True)
-            lineEdits[columnName] = dbLineEdit
+            lineEdits[param] = dbLineEdit
             self.mainGridLayout.addWidget(dbLineEdit, row, self.dbParamsColumn, 1, 2)
 
             supplierLineEdit = QLineEdit()
-            supplierLineEdit.setText(self.paramsDicts[self.tableListComboBox.currentText()][columnName])
+            supplierLineEdit.setText(self.paramsDicts[supplier][table][param])
             supplierLineEdit.textChanged.connect(lambda: self.saveButton.setEnabled(True))
-            supplierLineEdit.textChanged.connect(lambda s, t=self.tableListComboBox.currentText(), c=columnName:
-                                                 utils.assignToDict(self.paramsDicts[t], lineEdits[c].text(), s))
-            lineEdits[columnName + "_s"] = supplierLineEdit
+            supplierLineEdit.textChanged.connect(lambda string, t=table, s=supplier, p=param:
+                                                 utils.assignToDict(self.paramsDicts[s][t],
+                                                                    lineEdits[p].text(),
+                                                                    string))
+            lineEdits[param + "_s"] = supplierLineEdit
             self.mainGridLayout.addWidget(supplierLineEdit, row, self.supplierParamsColumn, 1, 2)
 
             row += 1
@@ -107,5 +113,5 @@ class ParameterMappingGroupBox(QGroupBox):
         saveToJson(jsonFile, self.paramsDicts)
         self.saveButton.setEnabled(False)
 
-    def getParamsDict(self):
-        return self.paramsDicts
+    def getParamsDict(self, supplier, table):
+        return self.paramsDicts[supplier][table]

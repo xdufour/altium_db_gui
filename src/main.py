@@ -462,21 +462,24 @@ class App:
 
     def querySupplier(self):
         result = []
+        errorMsg = ""
         if not self.ceQuerySupplierButton.isEnabled():
             return
         self.statusBar.setStatus(f"Querying supplier for component attributes...", StatusColor.Default)
         pn = self.ceSupplierPn1LineEdit.text()
         print(f"Querying {self.ceSupplier1Combobox.currentText()} for {pn}")
         if self.ceSupplier1Combobox.currentText() == 'Digi-Key':
-            result = fetchDigikeyData(pn, utils.strippedList(self.dbColumnNames, permanentParams + self.supplierParams),
+            result, errorMsg = fetchDigikeyData(pn, utils.strippedList(self.dbColumnNames,
+                                                                       permanentParams + self.supplierParams),
                                       self.dbParamsGroupBox.getParamsDict()[self.tableNameCombobox.currentText()])
         elif self.ceSupplier1Combobox.currentText() == 'Mouser':
-            result = fetchMouserData(pn, utils.strippedList(self.dbColumnNames, permanentParams + self.supplierParams),
+            result, errorMsg = fetchMouserData(pn, utils.strippedList(self.dbColumnNames,
+                                                                      permanentParams + self.supplierParams),
                                      self.dbParamsGroupBox.getParamsDict()[self.tableNameCombobox.currentText()])
         print(result)
         if len(result) == 0:
             utils.setLineEditValidationState(self.ceSupplierPn1LineEdit, False)
-            self.statusBar.setStatus(f"Supplier API Request Failed",
+            self.statusBar.setStatus(f"{errorMsg}",
                                      StatusColor.Red)
         else:
             utils.setLineEditValidationState(self.ceSupplierPn1LineEdit, True)

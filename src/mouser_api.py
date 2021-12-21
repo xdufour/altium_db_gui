@@ -227,6 +227,7 @@ def fetchMouserData(mouserPartNumber, requestedParams, paramDict):
     url = f"https://www.mouser.ca/c/?q={mouserPartNumber}"
 
     result = []
+    errorMsg = ""
     paramList = []
     valueList = []
     scrapedDict = {}
@@ -242,8 +243,9 @@ def fetchMouserData(mouserPartNumber, requestedParams, paramDict):
             break
 
     if not requestSuccess:
-        print("Mouser Web Scraping Failed: Access Forbidden")
-        return []
+        errorMsg = "Mouser Web Request Failed: Access forbidden"
+        print(errorMsg)
+        return [], errorMsg
 
     try:
         soup = BeautifulSoup(r.text, 'lxml')
@@ -301,11 +303,10 @@ def fetchMouserData(mouserPartNumber, requestedParams, paramDict):
             else:
                 value = mouserDataDict.get(column, "")
             result.append([column, value])
-
-        return result
     except AttributeError:
-        print("Mouser Web Scraping Failed: Invalid Part Number")
-    return []
+        errorMsg = "Mouser Web Request Failed: Invalid part number"
+        print(errorMsg)
+    return result, errorMsg
 
 
 

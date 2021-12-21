@@ -10,10 +10,12 @@ os.environ['DIGIKEY_STORAGE_PATH'] = os.getenv('APPDATA') + '\\Altium DB GUI\\js
 
 # Query product number
 def fetchDigikeyData(digikeyPartNumber, requestedParams, paramDict):
+    result = []
+    errorMsg = ""
+    dkDataDict = {}
+
     try:
         part = digikey.product_details(digikeyPartNumber)
-        result = []
-        dkDataDict = {}
         paramDict = dict((v, k) for k, v in paramDict.items())
 
         for p in part.parameters:
@@ -34,12 +36,13 @@ def fetchDigikeyData(digikeyPartNumber, requestedParams, paramDict):
             else:
                 value = dkDataDict.get(column, "")
             result.append([column, value])
-        return result
     except AttributeError:
-        print("Digi-Key API Request Failed: Invalid Part Number")
+        errorMsg = "Digi-Key API Request Failed: Invalid part number"
+        print(errorMsg)
     except urllib3.exceptions.MaxRetryError:
-        print("Digi-Key API Request Failed: Failed to establish connection")
-    return []
+        errorMsg = "Digi-Key API Request Failed: Failed to establish connection"
+        print(errorMsg)
+    return result, errorMsg
 
 
 def fetchDigikeySupplierPN(manufacturerPartNumber):

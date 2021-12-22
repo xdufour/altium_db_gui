@@ -50,10 +50,12 @@ class MySQLQuery:
         connected = False
         if self.cnx is not None:
             try:
-                self.cnx.ping(reconnect=attemptReconnect)
+                self.cnx.reconnect(int(attemptReconnect))
                 connected = True
             except InterfaceError:
-                self.errorMsg = "MySQL Server Connection: Failed to reconnect automatically"
+                self.errorMsg = "MySQL Server Connection: Lost connection"
+                if attemptReconnect:
+                    self.errorMsg += ", failed to reconnect automatically"
                 print(self.errorMsg)
         return connected
 

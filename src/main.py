@@ -540,9 +540,12 @@ class App:
 
     def isDbConnectionValid(self):
         if self.mySqlQuery.isConnected():
+            if not self.connectedToDb:
+                self.statusBar.setStatus("MySQL Server Connection: Reconnected to database", StatusColor.Green)
+            self.connectedToDb = True
             return True
         else:
-            self.statusBar.setStatus(self.mySqlQuery.errorMsg, StatusColor.Red)
+            self.statusBar.setStatus(self.mySqlQuery.errorMsg, StatusColor.Yellow)
             self.connectedToDb = False
 
     def loadDbTables(self):

@@ -3,6 +3,7 @@ import csv
 import json
 import requests
 import utils
+from itertools import cycle
 from bs4 import BeautifulSoup
 
 # Mouser Base URL
@@ -14,7 +15,7 @@ userAgentList = [
     "Chrome/96.0.4664.110",
     "Safari/537.36"
 ]
-
+userAgents = cycle(userAgentList)
 
 def get_api_keys(filename=None):
     """ Mouser API Keys """
@@ -232,17 +233,10 @@ def fetchMouserData(mouserPartNumber, requestedParams, paramDict):
     valueList = []
     scrapedDict = {}
     mouserDataDict = {}
-    requestSuccess = False
 
-    for u in userAgentList:
-        requestHeader = {'User-Agent': u}
-        r = requests.get(url, headers=requestHeader)
-        if r.status_code == 200:
-            requestSuccess = True
-            print(u)
-            break
-
-    if not requestSuccess:
+    requestHeader = {'User-Agent': next(userAgents), 'referer': "https://www.trustedparts.com"}
+    r = requests.get(url, headers=requestHeader)
+    if r.status_code == 403:
         errorMsg = "Mouser Web Request Failed: Access forbidden"
         print(errorMsg)
         return [], errorMsg

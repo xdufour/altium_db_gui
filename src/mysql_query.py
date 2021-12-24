@@ -125,14 +125,14 @@ class MySQLQuery:
         cursor = self.cnx.cursor()
         result = True
         for edit in editList:
-            query = f"UPDATE `{self.db}`.`{table}` SET "  # TODO: Refactor to use escape sequences (prevent injection)
-            for columnName, value in zip(edit.columnNames, edit.values):
-                query += "`" + columnName + "` = '" + value + "', "
+            query = f"UPDATE `{self.db}`.`{table}` SET "
+            for columnName in edit.columnNames:
+                query += "`" + columnName + "` = %s, "
             query = query[:len(query) - 2]
             query += " WHERE (`" + edit.primaryKey + "` = '" + edit.pkValue + "')"
             print("SQL Query: " + query)
             try:
-                cursor.execute(query)
+                cursor.execute(query, edit.values)
                 self.cnx.commit()
                 print(cursor.rowcount, " row(s) affected")
                 if cursor.rowcount < 1:

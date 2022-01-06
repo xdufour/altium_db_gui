@@ -27,6 +27,10 @@ class ParameterMappingGroupBox(QGroupBox):
                 for dbParam in tableColumnsList[i]:
                     self.paramsDicts[supplier][table][dbParam] = dbParam
 
+        configDict = loadFromJson(jsonFile)
+        if len(configDict) > 0:
+            self.paramsDicts = configDict
+
         self.dbParamsColumn = 0
         self.equalsLabelColumn = 2
         self.supplierParamsColumn = 3
@@ -82,10 +86,6 @@ class ParameterMappingGroupBox(QGroupBox):
         for k in lineEdits:
             lineEdits[k].deleteLater()
         lineEdits.clear()
-
-        configDict = loadFromJson(jsonFile)
-        if len(configDict) > 0:
-            self.paramsDicts = configDict
 
         self.mainGridLayout.takeAt(self.mainGridLayout.indexOf(self.saveButton))
 

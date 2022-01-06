@@ -15,5 +15,4 @@ class Executor(QRunnable):
 
     def run(self):
         res = self.fn(*self.args)
-        if type(res) == str:
-            self.signals.resultAvailable.emit(res)
+        self.signals.resultAvailable.emit(res)

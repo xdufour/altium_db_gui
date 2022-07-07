@@ -567,7 +567,10 @@ class App:
         self.dbLoginSaveButton.setEnabled(False)
 
     def testDbConnection(self):
-        if not self.connectedToDb and len(self.loginInfoDict) > 0 and not utils.dictHasEmptyValue(self.loginInfoDict):
+        if not len(self.loginInfoDict) or utils.dictHasEmptyValue(self.loginInfoDict):
+            self.tabWidget.setTabEnabled(0, False)
+            return
+        if not self.connectedToDb:
             self.mySqlQuery = MySQLQuery(self.dbUserLineEdit.text(),
                                          self.dbPasswordLineEdit.text(),
                                          self.dbAddressLineEdit.text(),

@@ -46,6 +46,7 @@ class App:
         applyIcon = utils.loadQIcon(':/ui/submit.png')
         editIcon = utils.loadQIcon(':/ui/copy.png')
         deleteIcon = utils.loadQIcon(':/ui/delete.png')
+        reloadIcon = utils.loadQIcon(':/ui/reload.png')
 
         app.setApplicationDisplayName("Altium DB GUI")
         app.setWindowIcon(appIcon)
@@ -228,6 +229,13 @@ class App:
         self.actionsHLayout.addStretch(1)
 
         tableIconSize = round(self.textHeight * 1.4)
+
+        self.reloadTableButton = QPushButton()
+        self.reloadTableButton.setIcon(reloadIcon)
+        self.reloadTableButton.setIconSize(QSize(tableIconSize, tableIconSize))
+        self.reloadTableButton.released.connect(self.updateTableViewFrame)
+        self.reloadTableButton.setToolTip("Refresh table from database")
+        self.actionsHLayout.addWidget(self.reloadTableButton)
 
         self.applyChangesButton = QPushButton()
         self.applyChangesButton.setIcon(applyIcon)
@@ -437,6 +445,9 @@ class App:
         self.tableWidget.setColumnCount(len(self.dbColumnNames))
         self.tableWidget.setRowCount(len(self.cachedTableData))
         self.tableWidget.setHorizontalHeaderLabels(self.dbColumnNames)
+
+        pendingEditList.clear()
+        self.applyChangesButton.setDisabled(True)
 
         fm = QFontMetrics(QFont(self.fontFamily, 9))
         maxColumnWidth = fm.boundingRect("Text").height() * 18
@@ -666,8 +677,6 @@ class App:
             self.statusBar.setStatus('Changes committed to database successfully', StatusColor.Green)
         else:
             self.statusBar.setStatus('Failed to commit one or more changes to database', StatusColor.Red)
-        self.applyChangesButton.setEnabled(False)
-        pendingEditList.clear()
         self.updateTableViewFrame()
 
     def filterTable(self, searchStr):

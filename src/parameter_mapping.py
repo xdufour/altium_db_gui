@@ -56,7 +56,7 @@ class ParameterMappingGroupBox(QGroupBox):
         self.supplierListComboBox.addItems(supplierList)
         self.supplierListComboBox.currentTextChanged.connect(self.updateTableMappingFields)
         self.mainGridLayout.addWidget(self.supplierListComboBox, self.comboBoxRow, self.supplierParamsColumn + 1)
-        self.mainGridLayout.setSpacing(self.textHeight * 0.6)
+        self.mainGridLayout.setSpacing(int(self.textHeight * 0.6))
         self.mainGridLayout.setColumnMinimumWidth(2, self.textHeight * 3)
 
         self.dbParamLabel = QLabel("Database Field Name")

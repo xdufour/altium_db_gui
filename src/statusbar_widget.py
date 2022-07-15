@@ -25,9 +25,9 @@ class StatusBar(QWidget):
         self.gridLayout.addWidget(self.statusBarMessage, 0, 2)
         self.gridLayout.setSpacing(0)
         self.gridLayout.addWidget(self.darkSpaceWidget, 0, 1)
-        self.gridLayout.setColumnMinimumWidth(1, textHeight * 0.7)
+        self.gridLayout.setColumnMinimumWidth(1, int(textHeight * 0.7))
         self.gridLayout.setColumnStretch(2, 1)
-        self.gridLayout.setRowMinimumHeight(0, textHeight * 1.6)
+        self.gridLayout.setRowMinimumHeight(0, int(textHeight * 1.6))
         self.hide()
 
     def setStatus(self, message, color=StatusColor.Default):

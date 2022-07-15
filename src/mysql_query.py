@@ -1,9 +1,10 @@
 from mysql.connector import connection
 from mysql.connector.errors import ProgrammingError, OperationalError, InterfaceError
 from mysql.connector.locales.eng import client_error
+import mariadb as mdb
 
 
-class MySqlEditQueryData:
+class SQLEditQueryData:
     def __init__(self, columnName, value, primaryKey, pkValue):
         self.columnNames = []
         self.values = []
@@ -21,12 +22,20 @@ class MySqlEditQueryData:
 
 
 # noinspection SqlNoDataSourceInspection,SqlDialectInspection
-class MySQLQuery:
-    def __init__(self, user, password, address, database):
+class SQLDB:
+    def __init__(self, user, password, address, database, rdbms):
         self.user = user
         self.db = database
+        self.rdbms = rdbms
         self.cnx = None
         self.errorMsg = ""
+
+        if rdbms == 'MySQL':
+            self.mySQLConnect(user, password, address, database)
+        elif rdbms == 'MariaDB':
+            self.mariaDBConnect(user, password, address, database)
+
+    def mySQLConnect(self, user, password, address, database):
         try:
             self.cnx = connection.MySQLConnection(user=user, password=password,
                                                   host=address,
@@ -46,14 +55,32 @@ class MySQLQuery:
                 self.errorMsg = "MySQL Server Connection Error: Unknown (#{e.errno})"
         print(self.errorMsg)
 
+    def mariaDBConnect(self, user, password, address, database):
+        try:
+            self.cnx = mdb.connect(
+                user=user,
+                password=password,
+                host=address,
+                database=database)
+            self.getUserGrants()
+            return
+        except mdb.Error as e:
+            print(f"MariaDB Server Connection Error: {e}")
+
     def isConnected(self, attemptReconnect=True):
         connected = False
         if self.cnx is not None:
             try:
-                self.cnx.reconnect(int(attemptReconnect))
+                if self.rdbms == 'MySQL': self.cnx.reconnect(int(attemptReconnect))
+                elif self.rdbms == 'MariaDB': self.cnx.reconnect()
                 connected = True
             except InterfaceError:
                 self.errorMsg = "MySQL Server Connection: Lost connection"
+                if attemptReconnect:
+                    self.errorMsg += ", failed to reconnect automatically"
+                print(self.errorMsg)
+            except mdb.Error:
+                self.errorMsg = "MariaDB Server Connection: Lost connection"
                 if attemptReconnect:
                     self.errorMsg += ", failed to reconnect automatically"
                 print(self.errorMsg)
@@ -154,6 +181,6 @@ class MySQLQuery:
             print(cursor.rowcount, " row(s) deleted")
             result = cursor.rowcount
         except ProgrammingError:
-            self.errorMsg = "SQL Query Deletion Failure"
+            self.errorMsg = f"SQL Query Deletion Failure"
             print(self.errorMsg)
         return result

@@ -10,7 +10,7 @@ import glob
 import resources
 import utils
 from json_appdata import *
-from mysql_query import MySQLQuery, MySqlEditQueryData
+from mysql_query import SQLDB, SQLEditQueryData
 import altium_parser
 from dk_api import fetchDigikeyData, fetchDigikeySupplierPN
 from mouser_api import fetchMouserData, fetchMouserSupplierPN
@@ -167,14 +167,23 @@ class App:
         self.loginGridLayout.addWidget(self.dbNameLabel, 3, 0)
         self.loginGridLayout.addWidget(self.dbNameLineEdit, 3, 2)
 
+        self.dbTypeLabel = QLabel("RDBMS:")
+        self.dbTypeCombobox = QComboBox()
+        self.dbTypeCombobox.addItems(['MySQL', 'MariaDB'])
+        self.dbTypeCombobox.setCurrentIndex(0)
+        self.dbTypeCombobox.currentTextChanged.connect(lambda s: utils.assignToDict(self.loginInfoDict, 'rdbms', s))
+        self.dbTypeCombobox.currentTextChanged.connect(lambda: self.dbLoginSaveButton.setEnabled(True))
+        self.loginGridLayout.addWidget(self.dbTypeLabel, 4, 0)
+        self.loginGridLayout.addWidget(self.dbTypeCombobox, 4, 2)
+
         self.dbConnectButton = QPushButton("Connect")
-        self.loginGridLayout.addWidget(self.dbConnectButton, 4, 0, 1, 2)
+        self.loginGridLayout.addWidget(self.dbConnectButton, 5, 0, 1, 2)
         self.dbConnectButton.released.connect(self.testDbConnection)
 
         self.dbLoginSaveButton = QPushButton("Save")
         self.dbLoginSaveButton.setEnabled(False)
         self.dbLoginSaveButton.setProperty('accent', True)
-        self.loginGridLayout.addWidget(self.dbLoginSaveButton, 4, 2)
+        self.loginGridLayout.addWidget(self.dbLoginSaveButton, 5, 2)
         self.dbLoginSaveButton.released.connect(self.saveDbLogins)
 
         self.settingsTopRightVLayout = QVBoxLayout()
@@ -571,6 +580,7 @@ class App:
         self.dbUserLineEdit.insert(self.loginInfoDict.get('user', ''))
         self.dbPasswordLineEdit.insert(self.loginInfoDict.get('password', ''))
         self.dbNameLineEdit.insert(self.loginInfoDict.get('database', ''))
+        self.dbTypeCombobox.setCurrentText(self.loginInfoDict.get('rdbms', ''))
         self.dbLoginSaveButton.setEnabled(False)
 
     def saveDbLogins(self):
@@ -582,10 +592,11 @@ class App:
             self.tabWidget.setTabEnabled(0, False)
             return
         if not self.connectedToDb:
-            self.mySqlQuery = MySQLQuery(self.dbUserLineEdit.text(),
-                                         self.dbPasswordLineEdit.text(),
-                                         self.dbAddressLineEdit.text(),
-                                         self.dbNameLineEdit.text())
+            self.mySqlQuery = SQLDB(self.dbUserLineEdit.text(),
+                                    self.dbPasswordLineEdit.text(),
+                                    self.dbAddressLineEdit.text(),
+                                    self.dbNameLineEdit.text(),
+                                    self.dbTypeCombobox.currentText())
             if self.mySqlQuery.isConnected():
                 self.connectedToDb = True
                 self.loadDbTables()
@@ -663,7 +674,7 @@ class App:
                 if pkValue == edit.pkValue:
                     edit.append(columnName, editedValue)
                     return
-            queryData = MySqlEditQueryData(columnName, editedValue, pk, pkValue)
+            queryData = SQLEditQueryData(columnName, editedValue, pk, pkValue)
             pendingEditList.append(queryData)
         else:
             print("Error while finding edit's corresponding primary key")

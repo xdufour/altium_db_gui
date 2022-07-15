@@ -22,17 +22,12 @@ class ParameterMappingGroupBox(QGroupBox):
 
         loadedDict = loadFromJson(jsonFile)
 
-        # TODO: Refactor to be generic
         for supplier in supplierList:
             self.paramsDicts[supplier] = {}
             for i, table in enumerate(tableList):
-                self.paramsDicts[supplier][table] = {}
-                try:
-                    self.paramsDicts[supplier][table] = loadedDict[supplier][table]
-                    for dbParam in tableColumnsList[i]:
-                        self.paramsDicts[supplier][table][dbParam] = loadedDict[supplier][table].get(dbParam, dbParam)
-                except KeyError:
-                    pass
+                self.paramsDicts[supplier][table] = loadedDict[supplier].get(table, {})
+                for dbParam in tableColumnsList[i]:
+                    self.paramsDicts[supplier][table][dbParam] = loadedDict[supplier].get(table, {}).get(dbParam, dbParam)
 
         self.dbParamsColumn = 0
         self.equalsLabelColumn = 2

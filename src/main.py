@@ -10,7 +10,7 @@ import glob
 import resources
 import utils
 from json_appdata import *
-from mysql_query import SQLDB, SQLEditQueryData
+from sql_query import SQLDB, SQLEditQueryData
 import altium_parser
 from dk_api import fetchDigikeyData, fetchDigikeySupplierPN
 from mouser_api import fetchMouserData, fetchMouserSupplierPN

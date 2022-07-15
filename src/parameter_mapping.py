@@ -20,16 +20,19 @@ class ParameterMappingGroupBox(QGroupBox):
         fm = QFontMetrics(QFont(QtGui.QGuiApplication.font().family(), QtGui.QGuiApplication.font().pointSize()))
         self.textHeight = fm.boundingRect("Text").height()
 
+        loadedDict = loadFromJson(jsonFile)
+
+        # TODO: Refactor to be generic
         for supplier in supplierList:
             self.paramsDicts[supplier] = {}
             for i, table in enumerate(tableList):
                 self.paramsDicts[supplier][table] = {}
-                for dbParam in tableColumnsList[i]:
-                    self.paramsDicts[supplier][table][dbParam] = dbParam
-
-        configDict = loadFromJson(jsonFile)
-        if len(configDict) > 0:
-            self.paramsDicts = configDict
+                try:
+                    self.paramsDicts[supplier][table] = loadedDict[supplier][table]
+                    for dbParam in tableColumnsList[i]:
+                        self.paramsDicts[supplier][table][dbParam] = loadedDict[supplier][table].get(dbParam, dbParam)
+                except KeyError:
+                    pass
 
         self.dbParamsColumn = 0
         self.equalsLabelColumn = 2
@@ -96,7 +99,12 @@ class ParameterMappingGroupBox(QGroupBox):
             self.mainGridLayout.addWidget(dbLineEdit, row, self.dbParamsColumn, 1, 2)
 
             supplierLineEdit = QLineEdit()
-            supplierLineEdit.setText(self.paramsDicts[supplier][table][param])
+            try:
+                supplierLineEdit.setText(self.paramsDicts[supplier][table][param])
+            except KeyError:
+                # New table was added in database that does not have paramater mapping yet
+                supplierLineEdit.setText('')
+
             supplierLineEdit.textChanged.connect(lambda: self.saveButton.setEnabled(True))
             supplierLineEdit.textChanged.connect(lambda string, t=table, s=supplier, p=param:
                                                  utils.assignToDict(self.paramsDicts[s][t],

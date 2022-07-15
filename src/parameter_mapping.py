@@ -25,9 +25,9 @@ class ParameterMappingGroupBox(QGroupBox):
         for supplier in supplierList:
             self.paramsDicts[supplier] = {}
             for i, table in enumerate(tableList):
-                self.paramsDicts[supplier][table] = loadedDict[supplier].get(table, {})
+                self.paramsDicts[supplier][table] = loadedDict.get(supplier, {}).get(table, {})
                 for dbParam in tableColumnsList[i]:
-                    self.paramsDicts[supplier][table][dbParam] = loadedDict[supplier].get(table, {}).get(dbParam, dbParam)
+                    self.paramsDicts[supplier][table][dbParam] = loadedDict.get(supplier, {}).get(table, {}).get(dbParam, dbParam)
 
         self.dbParamsColumn = 0
         self.equalsLabelColumn = 2

@@ -1,6 +1,8 @@
+import subprocess
 from PyQt5.QtGui import QIcon
 import os
 import re
+from subprocess import PIPE
 
 
 def loadQIcon(filepath):
@@ -66,3 +68,19 @@ def strReplaceMultiple(string: str, charList, charNew) -> str:
     for c in charList:
         newStr = newStr.replace(c, charNew)
     return newStr
+
+
+def ping(address: str, timeout=1000) -> bool:
+    result = subprocess.run(["ping", "-n", "1", "-w", f"{timeout}", address],
+                            stdin=subprocess.DEVNULL,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            creationflags=0x08000000,
+                            text=True)
+    response = result.stdout
+    if "re‡us = 1" in response or "Received = 1" in response:
+        print(f"Ping to {address} successful")
+        return True
+    else:
+        print(f"Ping to {address} unsuccessful")
+        return False

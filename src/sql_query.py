@@ -2,6 +2,7 @@ from mysql.connector import connection
 from mysql.connector.errors import ProgrammingError, OperationalError, InterfaceError
 from mysql.connector.locales.eng import client_error
 import mariadb as mdb
+import utils
 
 
 class SQLEditQueryData:
@@ -26,10 +27,14 @@ class SQLDB:
     def __init__(self, user, password, address, database, rdbms):
         self.user = user
         self.db = database
+        self.address = address
         self.rdbms = rdbms
         self.cnx = None
         self.errorMsg = ""
 
+        if not utils.ping(self.address, 500):
+            self.errorMsg = "MySQL Server Connection: Host offline"
+            return
         if rdbms == 'MySQL':
             self.mySQLConnect(user, password, address, database)
         elif rdbms == 'MariaDB':
@@ -74,16 +79,14 @@ class SQLDB:
                 if self.rdbms == 'MySQL': self.cnx.reconnect(int(attemptReconnect))
                 elif self.rdbms == 'MariaDB': self.cnx.reconnect()
                 connected = True
-            except InterfaceError:
+            except (InterfaceError, mdb.Error) as e:
                 self.errorMsg = "MySQL Server Connection: Lost connection"
                 if attemptReconnect:
                     self.errorMsg += ", failed to reconnect automatically"
                 print(self.errorMsg)
-            except mdb.Error:
-                self.errorMsg = "MariaDB Server Connection: Lost connection"
-                if attemptReconnect:
-                    self.errorMsg += ", failed to reconnect automatically"
-                print(self.errorMsg)
+                if not utils.ping(self.address, 250):
+                    self.errorMsg += " (Host offline)"
+                    return connected
         return connected
 
     def getErrorMessage(self):
